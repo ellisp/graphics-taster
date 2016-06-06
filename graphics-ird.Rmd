@@ -1,0 +1,11 @@
+---
+title: "Statistical graphics for communicating"
+author: "Peter Ellis"
+date: "June 2016"
+output:
+  revealjs::revealjs_presentation:
+    fig_height: 3
+    theme: sky
+    includes:
+      in_header: header.css
+---
