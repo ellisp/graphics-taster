@@ -46,7 +46,7 @@ load("data/AreaUnits2013.rda")
 - What makes graphics excellence
 - Improving graphics
 
-# Different purposes of graphics
+# Purposes of graphics
 
 ## Data science workflow
 
@@ -165,9 +165,8 @@ ggplot(coefs, aes(x = variable, ymin = lower, ymax = upper, y = est)) +
 ## Illustrate concepts
 ![animation1](regression_n_small.gif)
 
-## Illustrate concepts
-
-<iframe width="980" height="650" src="https://ellisp.shinyapps.io/control-charts/" style = "overflow-y: hidden;"></iframe>
+## 
+<iframe width="980" height="700" src="https://ellisp.shinyapps.io/control-charts/" style = "overflow-y: hidden;"></iframe>
 ##
 ```{r}
 load("data/TAGDP_public.rda")
@@ -246,7 +245,98 @@ method="bottom.pieces"
 
 *Adapted from Tufte*
 
-# Improvement example 1
+## Some specifics
+- Comparative
+- Multivariate
+- High data density
+- Reveal interactions and comparisons
+- Nearly all the ink is data ink
+
+# Examples
+## Improve this...    {data-transition="fade-out"}
+
+```{r}
+library(likert)
+data(pisaitems)
+items29 <- pisaitems[,substr(names(pisaitems), 1,5) == 'ST25Q']
+names(items29) <- c("Magazines", "Comic books", "Fiction", 
+                   "Non-fiction books", "Newspapers")
+l29 <- likert(items29)
+l29_df <- l29$results %>%
+    gather(Response, value, -Item)  %>%
+    mutate(Response = factor(Response, levels = names(l29$results)[-1]))
+
+ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
+    geom_bar(position = "stack") +
+    scale_y_continuous("", label = percent) +
+    scale_fill_brewer(palette = "Set1", guide = guide_legend(reverse=TRUE)) +
+    labs(x = "")
+
+```
+
+## Orient for easy reading    {data-transition="fade"}
+```{r}
+ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
+    geom_bar(position = "stack") +
+    scale_y_continuous("", label = percent) +
+    scale_fill_brewer("", palette = "Set1") +
+    labs(x = "") +
+    coord_flip() +
+    theme(legend.position = "bottom",
+          legend.text = element_text(size = 8))
+```
+
+## Better colours    {data-transition="fade"}
+```{r}
+ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
+    geom_bar(position = "stack") +
+    scale_y_continuous("", label = percent) +
+    scale_fill_brewer("", palette = "Greens") +
+    labs(x = "") +
+    coord_flip() +
+    theme(legend.position = "bottom",
+          legend.text = element_text(size = 8))
+```
+
+## Diverging scale    {data-transition="fade"}
+```{r}
+ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
+    geom_bar(position = "stack") +
+    scale_y_continuous("", label = percent) +
+    scale_fill_brewer("", palette = "BrBG") +
+    labs(x = "") +
+    coord_flip() +
+    theme(legend.position = "bottom",
+          legend.text = element_text(size = 8))
+```
+
+## Use position     {data-transition="fade"}
+```{r}
+plot(l29)
+```
+
+## Much better than     {data-transition="fade-in"}
+```{r}
+ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
+    geom_bar(position = "stack") +
+    scale_y_continuous("", label = percent) +
+    scale_fill_brewer(palette = "Set1", guide = guide_legend(reverse=TRUE)) +
+    labs(x = "")
+```
+
+
+## Perception of quantity
+
+From best to worst
+
+1. Position
+2. Length
+3. Area
+4. Volume
+5. Area and slope
+6. Colour and density
+
+# Example
 
 ## Cluttered    {data-transition="fade-out"}
 ```{r}
@@ -381,7 +471,12 @@ p +
     theme(axis.title.y = element_text(colour = "black", face= "bold"))
 ```
 
-# Improvement example 2
+## Principles
+
+- Remove all unnecessary ink
+- Focus on the data
+
+# Example
 ## Original  {data-transition="fade-out"}
 ```{r}
 load("data/REGC2013.rda")
@@ -507,6 +602,12 @@ REGC2013 %>%
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
+## Principles
+
+- Use order / position on page
+- Choose geom to mkae comparison easy
+- Use colour to make comparison easy
+- Avoid strobing and similar unfortunate effects
 
 # Improvement example 3
 
@@ -654,6 +755,14 @@ ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
           axis.ticks.y = element_blank())
 ```
 
+## Principles
+
+- Don't rely on angle and slope - use position instead
+- Minimise non-data ink
+- Subtle colours to focus on the data
+- Make matching data to labels easy
+
+
 
 # Statistical transformations
 
@@ -699,10 +808,8 @@ itm %>%
              family = "Calibri", colour = "grey50")
 ```
 
-## Key points in common:
-- Comparative
-- Multivariate
-- High data density
-- Reveal interactions and comparisons
-- Nearly all the ink is data ink
+## Principles
 
+- Don't be afraid of using a statistical transform to make the data meaningful
+- Discrete annotations, but which don't take the foreground from the data
+- Lots of subtlety in colour (shades of grey) to allow focus on data
