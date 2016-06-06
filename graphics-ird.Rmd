@@ -9,3 +9,116 @@ output:
     includes:
       in_header: header.css
 ---
+
+
+
+## Today's content
+
+- Different purposes of graphics
+- What makes graphics excellence
+- Improving graphics
+
+# Different purposes of graphics
+
+## Data science workflow
+
+## Comprehend this: {data-transition="fade-out"}
+```{r echo = TRUE}
+data(anscombe)
+anscombe[ , c(1,5,2,6,3,7,4,8)]
+```
+
+## compared to:  {data-transition="fade"}
+
+```{r}
+# pinched from https://gist.github.com/amoeba/7576126
+anscombe_m <- data.frame()
+for(i in 1:4)  {
+    anscombe_m <- rbind(anscombe_m, 
+                        data.frame(set = paste("Dataset", i), 
+                                   x = anscombe[ , i], 
+                                   y = anscombe[ , i + 4])) 
+}
+ggplot(anscombe_m, aes(x = x, y = y)) +
+    geom_smooth(method = "lm", se = FALSE, colour = "grey75") +
+    geom_point() +
+    facet_wrap(~set) +
+    labs(x = "", y = "")
+
+```
+
+
+## Put the data in its place
+```{r}
+deaths <- readShapePoints("../downloads/SnowGIS/Cholera_Deaths")
+df_deaths <- data.frame(deaths@coords)
+coordinates(df_deaths) <- ~coords.x1 + coords.x2
+proj4string(df_deaths) <- CRS("+init=epsg:27700") 
+df_deaths = spTransform(df_deaths,CRS("+proj=longlat +datum=WGS84"))
+
+get_london <- get_map(c(-.137,51.513), zoom = 16, maptype = "toner-lite")
+london <- ggmap(get_london)
+print(
+london + 
+    geom_jitter(data=data.frame(df_deaths@coords), 
+                aes(x=coords.x1, y=coords.x2),
+                col="red", alpha = 0.5, size = 2) +
+    theme_map()
+
+)
+```
+
+## Use during analysis
+```{r}
+
+au <- AreaUnits2013[ , -(1:2)]
+names(au) <- gsub("2013", "", names(au))
+x <- 20
+
+
+while(max(x) > 10){
+    mod1 <- lm(MedianIncome ~ . , data = au)
+    x <- sort(vif(mod1) , decreasing = TRUE)
+    au <- au[ , names(au) != names(x)[1]]
+    message(paste("dropping", names(x)[1]))
+}
+
+ggpairs(au[sample(1:nrow(au), 300) , 1:6],
+        title = "Six variables by area unit, NZ census 2013")
+
+```
+
+## present results
+```{r}
+
+mod2 <- glm(MedianIncome ~ ., data = au, family = quasi(link = "log"))
+tmp <- confint(mod2)
+coefs <- data.frame(est = coef(mod2),
+           lower = tmp[ ,1],
+           upper = tmp[ , 2],
+           variable = rownames(tmp)) %>%
+    filter(variable != "(Intercept)") %>%
+   arrange(est) %>%
+   mutate(variable = gsub("Prop", "", variable)) %>%
+   mutate(variable = factor(variable, levels = variable))
+   
+ggplot(coefs, aes(x = variable, ymin = lower, ymax = upper, y = est)) + 
+   geom_hline(yintercept = 0, colour = "lightblue") +
+   geom_linerange(aes(colour = est), size = 1.1) +
+   geom_text(aes(label = variable), size = 3, family = "Calibri", vjust = 0, 
+             nudge_x = 0.15, colour = "grey40") +
+   coord_flip() +
+   labs(y = "\nHorizontal lines show 95% confidence interval of impact on median income.",
+        x = "") +
+   ggtitle("Census characteristics relationship to median income",
+      subtitle = "New Zealand General Election 2014 area units data") +
+   theme(axis.text.y = element_blank(),
+         axis.ticks.y = element_blank()) +
+   annotate("text", y = -1.5, x = 6, label = "Lower income", 
+            colour = "darkred", family = "Calibri") +
+   annotate("text", y = 1.5, x = 31, label = "Higher income", 
+            colour = "darkblue", family = "Calibri") +
+    scale_colour_gradientn(colours = c("red", "grey10", "blue"), guide = "none")
+```
+
+
