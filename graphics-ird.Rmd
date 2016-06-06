@@ -4,12 +4,40 @@ author: "Peter Ellis"
 date: "June 2016"
 output:
   revealjs::revealjs_presentation:
-    fig_height: 3
+    fig_height: 6
     theme: sky
     includes:
       in_header: header.css
 ---
 
+```{r setup, include=FALSE}
+# needs to be run from the ./Session1/ directory
+stripcolour <- "grey93"
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(tidyr)
+library(ggthemes)
+library(foreign)
+library(ggmap)
+library(sp)
+library(rgdal)
+library(maptools)
+library(extrafont)
+library(ggrepel)
+library(mbieDBmisc)
+library(RODBC)
+library(car) # for vif()
+library(GGally) # for ggpairs
+library(ggseas)
+theme_set(theme_solarized(base_family = "Calibri") +
+    theme(panel.background = element_blank(),
+          strip.background = element_rect(colour = NA, fill = stripcolour)))
+
+load("data/nzis.rda")
+load("data/AreaUnits2013.rda")
+```
 
 
 ## Today's content
@@ -21,6 +49,19 @@ output:
 # Different purposes of graphics
 
 ## Data science workflow
+
+![datascience](images/data-science.png)
+
+Grolemund and Wickham, http://r4ds.had.co.nz/introduction.html
+
+
+## Different purposes
+
+...exploratory...
+
+...analysis and diagnosis...
+
+...presentation...
 
 ## Comprehend this: {data-transition="fade-out"}
 ```{r echo = TRUE}
@@ -50,7 +91,7 @@ ggplot(anscombe_m, aes(x = x, y = y)) +
 
 ## Put the data in its place
 ```{r}
-deaths <- readShapePoints("../downloads/SnowGIS/Cholera_Deaths")
+deaths <- readShapePoints("data/SnowGIS/Cholera_Deaths")
 df_deaths <- data.frame(deaths@coords)
 coordinates(df_deaths) <- ~coords.x1 + coords.x2
 proj4string(df_deaths) <- CRS("+init=epsg:27700") 
@@ -121,4 +162,547 @@ ggplot(coefs, aes(x = variable, ymin = lower, ymax = upper, y = est)) +
     scale_colour_gradientn(colours = c("red", "grey10", "blue"), guide = "none")
 ```
 
+## Illustrate concepts
+![animation1](regression_n_small.gif)
+
+## Illustrate concepts
+
+<iframe width="980" height="650" src="https://ellisp.shinyapps.io/control-charts/" style = "overflow-y: hidden;"></iframe>
+##
+```{r}
+load("data/TAGDP_public.rda")
+load("data/mtagdp_totals.rda")
+library(mbiemaps)
+library(mgcv)
+library(directlabels)
+library(RColorBrewer)
+
+data(ta_simpl_gg)
+snapshot_2005 <- TAGDP_public %>%
+    group_by(TA) %>%
+    summarise(Ag2005 = sum(GDP[Year == 2005 & RGDP_industry == "Agriculture"])/ 
+                  sum(GDP[Year == 2005]),
+              GDPpp2005 = sum(GDP_perCapita[Year == 2005]))
+
+totals <- mtagdp_totals %>%
+    group_by(TA, Year) %>%
+    summarise(GDP_real = sum(GDP_real))
+
+
+combined <- totals %>%
+    left_join(snapshot_2005)
+
+
+
+
+the_data <- combined %>%
+    ungroup() %>%
+    group_by(TA) %>%
+    summarise(Ag2005 = unique(Ag2005),
+              CAGR10 = CAGR(GDP_real[Year == 2015] / GDP_real[Year == 2005], 10) / 100,
+              GDPpp2005 = unique(GDPpp2005)) %>%
+    rename(FULLNAME = TA) %>%
+    left_join(distinct(ta_simpl_gg[ , c("long.centre", "lat.centre", "FULLNAME")])) %>%
+    mutate(TA = gsub(" District", "", FULLNAME),
+           TA = gsub(" City", "", TA),
+           outlier = ifelse(CAGR10 > 0.05 | CAGR10 < -0.02, TA, ""))
+
+
+model_spatial <- gam(CAGR10 ~ s(long.centre, lat.centre), data = the_data)
+the_data$pred <- fitted(model_spatial)
+
+longs <- seq(min(the_data$long.centre) - 3, max(the_data$long.centre) + 1, length = 100)
+lats <- seq(min(the_data$lat.centre) - 1, max(the_data$lat.centre) + 1, length = 100)
+the_grid <- expand.grid(long.centre = longs, lat.centre = lats)
+the_grid$pred <- predict(model_spatial, newdata = the_grid)
+
+
+print(direct.label(
+ggplot(the_grid, aes(x = long.centre, y = lat.centre, z = pred * 100)) +
+    geom_raster(aes(fill = pred), interpolate = TRUE) +
+    geom_contour(aes(colour = ..level.. )) +
+    borders("nz", colour = "grey20") +
+    mbie::theme_nothing(base_family = "Calibri") +
+    coord_equal() +
+    ggtitle("Economic growth 2005 - 2015") +
+    scale_fill_gradientn("Average annual\ngrowth", colours = brewer.pal(8, "RdYlBu"), label = percent),
+method="bottom.pieces"
+))
+
+```
+
+## {data-background-video="rotating2.mp4"}
+
+
+
+# Graphic excellence
+
+## Principles
+- *well-designed* presentation of interesting data - *substance, statistics, and design*
+- *complex ideas* communicated with *clarity, precision*, and *efficiency*
+- *greatest number* of ideas in the *shortest time* with the *least ink* in the *smallest space*
+- nearly always *multivariate*
+- *telling the truth* about the data
+
+*Adapted from Tufte*
+
+# Improvement example 1
+
+## Cluttered    {data-transition="fade-out"}
+```{r}
+library(WDI)
+
+econ <- WDI(
+         country = c("1W", "AU", "NZ", "US"), 
+         indicator = c("FP.CPI.TOTL.ZG", "NY.GDP.MKTP.KD.ZG"),
+         start = 1978)
+names(econ)[4:5] <- c("inflation_cpi", "gdp_growth")
+econ <- econ %>%
+    group_by(country) %>%
+    mutate(labyear = ifelse(year == max(year), max(year), ""),
+           labyear = ifelse(year == min(year), min(year), labyear))
+
+
+p <- econ %>%
+    ungroup() %>%
+    select(inflation_cpi, gdp_growth, country, year) %>%
+    gather(variable, value, -year, -country) %>%
+    mutate(variable = ifelse(variable == "gdp_growth", "Economy (GDP)", "Inflation (CPI)")) %>%
+    ggplot(aes(x = year, y = value / 100, colour = variable)) +
+    geom_line() +
+    facet_wrap(~country) +
+    labs(x = "", colour = "") +
+    theme_excel() +
+    theme(legend.position = "bottom") +
+    scale_y_continuous("Growth per year", label = percent) +
+    ggtitle("Economic growth and inflation, selected countries")
+
+p + 
+    facet_wrap(~country, scales = "free") +
+    scale_y_continuous("Growth per year", label = percent, lim = c(-.03, .168)) +
+    theme(plot.background = element_rect(colour = "black", size = 3, linetype = 1)) +
+    theme(axis.title.y = element_text(colour = "black", face= "bold"))
+```
+
+## Minimal axis guides {data-transition="fade-out"}
+```{r}
+p + 
+    theme(plot.background = element_rect(colour = "black", size = 3, linetype = 1)) +
+    theme(axis.title.y = element_text(colour = "black", face= "bold"))
+
+```
+
+
+## Fade axis title    {data-transition="fade"}
+```{r}
+p + 
+    theme(plot.background = element_rect(colour = "black", size = 3, linetype = 1)) 
+```
+
+## Remove borders    {data-transition="fade"}
+```{r}
+p 
+```
+
+
+## Remove boxes   {data-transition="fade"}
+```{r}
+p + theme(legend.background = element_rect(colour = NA),
+          panel.border = element_rect(colour = NA))
+```
+
+## Guidelines to back   {data-transition="fade"}
+```{r}
+p + 
+    theme(legend.background = element_rect(colour = NA),
+          panel.border = element_rect(colour = NA),
+          panel.grid.major.y = element_line(colour = "grey98")) 
+```
+
+## Background to back   {data-transition="fade"}
+```{r}
+p + 
+    theme(legend.background = element_rect(colour = NA),
+          panel.border = element_rect(colour = NA),
+          panel.background = element_rect(fill = "grey90"),
+          panel.grid.major.y = element_line(colour = "grey98")) 
+```
+
+## Consistent doc theme   {data-transition="fade"}
+```{r}
+p + theme_solarized() +
+    theme(panel.background = element_blank()) +
+    theme(legend.position = "bottom",
+          strip.background = element_rect(colour = NA, fill = stripcolour))
+```
+
+## Consistent font   {data-transition="fade"}
+```{r}
+p + theme_solarized(base_family = "Calibri") +
+    theme(panel.background = element_blank()) +
+    theme(legend.position = "bottom",
+          strip.background = element_rect(colour = NA, fill = stripcolour))
+```
+
+## Corporate colours   {data-transition="fade"}
+```{r}
+p + theme_solarized(base_family = "Calibri") +
+    theme(panel.background = element_blank()) +
+    theme(legend.position = "bottom",
+          strip.background = element_rect(colour = NA, fill = stripcolour)) +
+    scale_colour_manual(values = mbie::mbie.cols(c(1, 3)))
+```
+
+## Direct labels   {data-transition="fade"}
+```{r}
+labs <- data.frame(
+    year = c(1983, 1989),
+    country = c("World", "World"),
+    variable = c("Inflation (CPI)", "Economy (GDP)"),
+    value = c(13, 0)
+)
+
+p + theme_solarized(base_family = "Calibri") +
+    theme(panel.background = element_blank()) +
+    theme(legend.position = "none",
+          strip.background = element_rect(colour = NA, fill = stripcolour)) +
+    scale_colour_manual(values = mbie::mbie.cols(c(1, 3))) +
+    geom_text(data = labs, aes(label = variable), family = "Calibri", 
+              hjust = 0, size = 3)
+```
+
+
+## Much better than: {data-transition="fade"}
+```{r}
+p + 
+    facet_wrap(~country, scales = "free") +
+    scale_y_continuous("Growth per year", label = percent, lim = c(-.03, .168)) +
+    theme(plot.background = element_rect(colour = "black", size = 3, linetype = 1)) +
+    theme(axis.title.y = element_text(colour = "black", face= "bold"))
+```
+
+# Improvement example 2
+## Original  {data-transition="fade-out"}
+```{r}
+load("data/REGC2013.rda")
+REGC2013 <- REGC2013[complete.cases(REGC2013), ]
+REGC2013 %>%
+    select(REGC2013_N, PropSmoker2013, PropAgForFish2013) %>%
+    gather(variable, value, - REGC2013_N) %>%
+    ggplot(aes(x = REGC2013_N, weight = value, fill = variable)) +
+    geom_bar(position = "dodge") +
+    scale_y_continuous("Proportion", label = percent) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+## User-friendly labels {data-transition="fade"}
+```{r}
+REGC2013 %>%
+    mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
+    select(REGC2013_N, PropSmoker2013, PropAgForFish2013) %>%
+    gather(variable, value, - REGC2013_N) %>%
+    ggplot(aes(x = REGC2013_N, weight = value, fill = variable)) +
+    geom_bar(position = "dodge") +
+    scale_y_continuous("Proportion", label = percent) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    labs(x = "", fill = "Variable")
+```
+
+## Horizontal text {data-transition="fade"}
+```{r}
+REGC2013 %>%
+    mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
+    select(REGC2013_N, PropSmoker2013, PropAgForFish2013) %>%
+    gather(variable, value, - REGC2013_N) %>%
+    ggplot(aes(x = REGC2013_N, weight = value, fill = variable)) +
+    geom_bar(position = "dodge") +
+    scale_y_continuous("Proportion", label = percent) +
+    labs(x = "", fill = "Variable") +
+    coord_flip()
+```
+
+## Meaningful ordering {data-transition="fade-in"}
+```{r}
+REGC2013 %>%
+    mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
+    select(REGC2013_N, PropSmoker2013, PropAgForFish2013) %>%
+    arrange(PropAgForFish2013) %>%
+    mutate(REGC2013_N = factor(REGC2013_N, levels = REGC2013_N)) %>%
+    gather(variable, value, - REGC2013_N) %>%
+    ggplot(aes(x = REGC2013_N, weight = value, fill = variable)) +
+    geom_bar(position = "dodge") +
+    scale_y_continuous("Proportion", label = percent) +
+    labs(x = "Regions - ordered by proportion\nworking in agriculture, forestry and fishing", fill = "Variable") +
+    coord_flip()
+```
+
+## Better shape and geom {data-transition="fade-out"}
+```{r}
+REGC2013 %>%
+    mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
+    ggplot(aes(x = PropAgForFish2013, y = PropSmoker2013)) +
+    geom_point() +
+    scale_y_continuous("Smokers", label = percent) +
+    scale_x_continuous("Working in agriculture, forestry and fishing", label = percent) 
+```
+
+## Labels on points {data-transition="fade"}
+```{r}
+REGC2013 %>%
+    mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
+    ggplot(aes(x = PropAgForFish2013, y = PropSmoker2013)) +
+    geom_point() +
+    geom_text_repel(aes(label = REGC2013_N), family = "Calibri") +
+    scale_y_continuous("Smokers", label = percent) +
+    scale_x_continuous("Working in agriculture, forestry and fishing", label = percent) 
+```
+
+## Title and annotation {data-transition="fade"}
+```{r}
+REGC2013 %>%
+    mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
+    ggplot(aes(x = PropAgForFish2013, y = PropSmoker2013)) +
+    geom_smooth(method = "lm", se = FALSE, colour = "lightblue") +
+    geom_point() +
+    geom_text_repel(aes(label = REGC2013_N), family = "Calibri") +
+    scale_y_continuous("Smokers", label = percent) +
+    scale_x_continuous("Working in agriculture, forestry and fishing", label = percent) +
+    ggtitle("Smokers compared to agriculture-forestry-fishery workers",
+            subtitle = "New Zealand 2013 census")
+```
+
+## Another dimension {data-transition="fade-in"}
+```{r}
+circlecol <- mbie.cols(4)
+
+ni <- c("Northland", "Hawke's Bay", "Taranaki", "Manawatu-Wanganui", "Waikato",
+        "Auckland", "Wellington", "Gisborne", "Bay of Plenty") 
+REGC2013 %>%
+    mutate(REGC2013_N = gsub(" Region", "", REGC2013_N),
+           island = ifelse(REGC2013_N %in% ni, "North Island",
+                           ifelse(REGC2013_N == "Area Outside",
+                                  "Other", "South Island"))) %>%
+    ggplot(aes(x = PropAgForFish2013, y = PropSmoker2013, color = island)) +
+    geom_smooth(method = "lm", se = FALSE, colour = "lightblue") +
+    geom_text_repel(aes(label = REGC2013_N),
+                     segment.size = 1,
+                    segment.color = "grey70", family = "Calibri") +
+    geom_point(size = 2) +
+    scale_y_continuous("Smokers", label = percent) +
+    scale_x_continuous("Working in agriculture, forestry and fishing", label = percent) +
+    scale_colour_manual("", values = mbie::mbie.cols()) +
+    scale_fill_manual("", values = mbie::mbie.cols()) +
+    ggtitle("Smokers compared to agriculture-forestry-fishery workers",
+            subtitle = "New Zealand 2013 census")
+```
+
+## Better than:  {data-transition="fade-in"}
+```{r namedchunk}
+REGC2013 %>%
+    select(REGC2013_N, PropSmoker2013, PropAgForFish2013) %>%
+    gather(variable, value, - REGC2013_N) %>%
+    ggplot(aes(x = REGC2013_N, weight = value, fill = variable)) +
+    geom_bar(position = "dodge") +
+    scale_y_continuous("Proportion", label = percent) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+# Improvement example 3
+
+## Difficult {data-transition="fade-out"}
+```{r}
+TRED <- odbcConnect("TRED_Prod")
+sql <- "
+SELECT
+sum(WeightedSpend * PopulationWeight) as spend,
+CORNextYR                             as country
+FROM
+vw_IVSSurveyMainHeader
+WHERE
+Year = 2015
+GROUP BY
+cornEXTyr
+"
+
+ivs <- sqlQuery(TRED, sql) %>%
+    mutate(country = mbie::CountryGroup(country)) %>%
+    group_by(country) %>%
+    summarise(spend = sum(spend / 10 ^ 6))
+
+
+ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
+    geom_bar(position = "stack", colour = "grey75") +
+    coord_polar(theta = "y") +
+    ggtitle("Tourist Spend in New Zealand 2015",
+            subtitle = "Millions of dollars") +
+    scale_y_continuous(label = dollar) +
+    labs(x = "", caption = "International Visitor Survey") +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+```
+
+## Use cartesian coordinates {data-transition="fade"}
+```{r}
+ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
+    geom_bar(position = "stack", colour = "grey75") +
+    ggtitle("Tourist Spend in New Zealand 2015",
+            subtitle = "Millions of dollars") +
+    scale_y_continuous(label = dollar) +
+    labs(x = "", y = "", caption = "International Visitor Survey") +
+    scale_fill_discrete(guide = guide_legend(reverse=TRUE))
+```
+
+## Use height {data-transition="fade"}
+```{r}
+ggplot(ivs, aes(x = country, weight = spend, fill = country)) +
+    geom_bar() +
+    ggtitle("Tourist Spend in New Zealand 2015",
+            subtitle = "Millions of dollars") +
+    scale_y_continuous(label = dollar) +
+    labs(x = "", y = "", caption = "International Visitor Survey") +
+    theme(legend.position = "none")
+```
+
+## Flip for readability {data-transition="fade"}
+```{r}
+ggplot(ivs, aes(x = country, weight = spend, fill = country)) +
+    geom_bar() +
+    ggtitle("Tourist Spend in New Zealand 2015",
+            subtitle = "Millions of dollars") +
+    scale_y_continuous(label = dollar) +
+    labs(x = "", y = "", caption = "International Visitor Survey") +
+    theme(legend.position = "none") +
+    coord_flip()
+```
+
+## Sequence {data-transition="fade"}
+```{r}
+ivs %>%
+     arrange(spend) %>%
+     mutate(country = factor(country, levels = country)) %>%
+     ggplot(aes(x = country, weight = spend, fill = country)) +
+     geom_bar() +
+     ggtitle("Tourist Spend in New Zealand 2015",
+             subtitle = "Millions of dollars") +
+     scale_y_continuous(label = dollar) +
+     labs(x = "", y = "", caption = "International Visitor Survey") +
+     theme(legend.position = "none") +
+     coord_flip()
+```
+
+## Maximise focus on data {data-transition="fade"}
+```{r}
+ivs %>%
+    arrange(spend) %>%
+    mutate(country = factor(country, levels = country)) %>%
+    ggplot(aes(y = country, x = spend)) +
+    geom_segment(aes(yend = country), xend = 0, colour = "steelblue") +
+    geom_point() +
+     ggtitle("Tourist Spend in New Zealand 2015",
+             subtitle = "International Visitor Survey") +
+     scale_x_continuous(label = dollar) +
+     labs(y = "", x = "Millions of dollars") 
+```
+
+## Labels near the data {data-transition="fade"}
+```{r}
+ivs %>%
+    arrange(spend) %>%
+    mutate(country = factor(country, levels = country)) %>%
+    ggplot(aes(y = country, x = spend)) +
+    geom_segment(aes(yend = country), xend = 0, colour = "steelblue") +
+    geom_point(size = 2) +
+    geom_text(aes(label = country), hjust = 0, family = "Calibri", nudge_x = 50,
+              colour = "steelblue") +
+    ggtitle("Tourist Spend in New Zealand 2015",
+         subtitle = "International Visitor Survey") +
+    scale_x_continuous(label = dollar, limits = c(0, 1750)) +
+    labs(y = "", x = "Millions of dollars") +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+```
+
+## Use like a table {data-transition="fade"}
+```{r}
+ivs %>%
+    arrange(spend) %>%
+    mutate(country = paste0(country, ", ", round(spend / sum(spend) * 100 ), "%")) %>%
+    mutate(country = factor(country, levels = country)) %>%
+    ggplot(aes(y = country, x = spend)) +
+    geom_segment(aes(yend = country), xend = 0, colour = "steelblue") +
+    geom_point(size = 2) +
+    geom_text(aes(label = country), hjust = 0, family = "Calibri", nudge_x = 50,
+              colour = "steelblue") +
+    ggtitle("Tourist Spend in New Zealand 2015",
+         subtitle = "International Visitor Survey") +
+    scale_x_continuous(label = dollar, limits = c(0, 1750)) +
+    labs(y = "", x = "Millions of dollars") +
+    theme(axis.text.y = element_blank())
+```
+
+## Better than  {data-transition="fade-in"}
+```{r}
+ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
+    geom_bar(position = "stack", colour = "grey75") +
+    coord_polar(theta = "y") +
+    ggtitle("Tourist Spend in New Zealand 2015",
+            subtitle = "Millions of dollars") +
+    scale_y_continuous(label = dollar) +
+    labs(x = "", caption = "International Visitor Survey") +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+```
+
+
+# Statistical transformations
+
+## Not just this {data-transition="fade-out"}
+```{r}
+itm <- ImportTS2(TRED, "Visitor arrival totals (Monthly)",
+			where = "CV1 = 'Actual Counts'", silent = TRUE)
+
+p2 <- ggplot(itm, aes(x = TimePeriod, y = Value)) +
+    geom_line() +
+    labs(x = "", y = "",
+         caption = "Source: International Travel and Migration, Statistics New Zealand") +
+    ggtitle("Monthly arrivals to New Zealand")
+
+p2 + scale_y_continuous(label = comma)
+    
+```
+
+
+
+## But this {data-transition="fade"}
+```{r}
+p2 + scale_y_log10(label = comma, breaks = c(1000, 10000, 100000))
+```
+
+## Or this {data-transition="fade-in"}
+```{r}
+itm %>%
+    ggplot(aes(x = TimePeriod, y = Value)) +
+    annotate("rect", xmin = as.Date("1939-09-01"), xmax = as.Date("1945-09-02"), 
+               ymin = min(itm$Value), ymax = 5000, fill = "orange", alpha = 0.3)  +
+    geom_line(colour = "grey70") +
+    labs(x = "", y = "",
+         caption = "Source: International Travel and Migration, Statistics New Zealand") +
+    ggtitle("Monthly arrivals to New Zealand") +
+    stat_stl(frequency = 12, s.window = 7) +
+    scale_y_log10(label = comma, breaks = c(1000, 10000, 100000)) +
+    annotate("text", x = as.Date("1992-01-01"), y = 8000, 
+             label = "Original and seasonally\nadjusted both shown",
+             family = "Calibri", colour = "grey50") +
+    annotate("text", x = as.Date("1940-01-01"), y = 50,
+             label = "World War II", hjust = 0,
+             family = "Calibri", colour = "grey50")
+```
+
+## Key points in common:
+- Comparative
+- Multivariate
+- High data density
+- Reveal interactions and comparisons
+- Nearly all the ink is data ink
 
