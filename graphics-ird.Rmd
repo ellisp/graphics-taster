@@ -11,9 +11,9 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-# needs to be run from the ./Session1/ directory
 stripcolour <- "grey93"
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE)
+library(MASS)
 library(dplyr)
 library(ggplot2)
 library(scales)
@@ -31,6 +31,7 @@ library(RODBC)
 library(car) # for vif()
 library(GGally) # for ggpairs
 library(ggseas)
+source("helpers.R")
 theme_set(theme_solarized(base_family = "Calibri") +
     theme(panel.background = element_blank(),
           strip.background = element_rect(colour = NA, fill = stripcolour)))
@@ -152,7 +153,7 @@ ggplot(coefs, aes(x = variable, ymin = lower, ymax = upper, y = est)) +
    labs(y = "\nHorizontal lines show 95% confidence interval of impact on median income.",
         x = "") +
    ggtitle("Census characteristics relationship to median income",
-      subtitle = "New Zealand General Election 2014 area units data") +
+      subtitle = "New Zealand 2013 Census area units data") +
    theme(axis.text.y = element_blank(),
          axis.ticks.y = element_blank()) +
    annotate("text", y = -1.5, x = 6, label = "Lower income", 
@@ -161,6 +162,16 @@ ggplot(coefs, aes(x = variable, ymin = lower, ymax = upper, y = est)) +
             colour = "darkblue", family = "Calibri") +
     scale_colour_gradientn(colours = c("red", "grey10", "blue"), guide = "none")
 ```
+
+## Compare to
+```{r echo = FALSE, results = 'asis'}
+library(stargazer)
+cat("<tiny>")
+stargazer(mod2, type = "html")
+cat("<\\tiny>")
+```
+
+
 
 ## Illustrate concepts
 ![animation1](regression_n_small.gif)
@@ -253,7 +264,122 @@ method="bottom.pieces"
 - Nearly all the ink is data ink
 
 # Examples
-## Improve this...    {data-transition="fade-out"}
+
+
+## Change this... {data-transition="fade-out"}
+```{r}
+n <- 8
+set.seed(124)
+comp_data <- data_frame(
+    site = c(1:n, 1:n),
+    when = factor(rep(c("Before", "After"), each = n), levels = c("Before", "After")), 
+    trial = rep(c("Trial", "Control", "Trial", "Control"), each = n / 2), 
+    timing = rgamma(n * 2, 3, 5) * 10 + 16
+) %>%
+    mutate(timing = ifelse(when == "After" & trial == "Trial",
+                           timing - rnorm(n * 2, 5, 4),
+                           timing + rnorm(n * 2, 0, 2))
+    ) 
+
+ggplot(comp_data, aes(x = when, weight = timing, fill = trial)) +
+    geom_bar(position = "dodge")  +
+    facet_wrap(~site, nrow = 2)
+
+```
+
+## ...to this: {data-transition="fade-in"}
+```{r}
+comp_data %>%
+    mutate(when = ifelse(when == "Before", -1, 1)) %>%
+    ggplot(aes(x = when, y = timing, group = site, colour= trial)) +
+    geom_line() +
+    theme_tufte(15, base_family = "Calibri") +
+    theme(legend.position = "top") +
+    scale_x_continuous("", breaks = c(-1.1, 1.1), labels = c("Before", "After"), limits = c(-1.5, 1.5)) +
+    labs(y = "", colour = "") +
+    theme(axis.ticks = element_blank(),
+          axis.text.y = element_blank()) +
+    geom_text(aes(x = when * 1.1, label = round(timing, 1)), 
+              family = "Calibri", show.legend = FALSE) +
+    theme(panel.background = element_rect(fill = "#fdf6e3", colour = NA), 
+          plot.background =  element_rect(fill = "#fdf6e3", colour = NA))
+```
+
+## This is good {data-transition="fade-out"}
+```{r}
+ggplot(nzis, aes(x = income)) +
+    geom_density() +
+    scale_x_continuous(trans = modulus_trans(0.2), label = dollar,
+                       breaks = mod_breaks(lambda = 0.2)) +
+    geom_rug() +
+    labs(x = "Weekly income") +
+    ggtitle("New Zealand Income Survey 2011")
+```
+
+
+## But this is better {data-transition="fade-in"}
+```{r}
+nzis2 <- nzis %>%
+    mutate(qualification2 = ifelse(qualification == "None", "No qualification",
+                                   ifelse(qualification == "Bachelor or Higher",
+                                          "Bachelor or higher", "In between")),
+           qualification2 = factor(qualification2,
+                                   levels = c("No qualification", "In between", "Bachelor or higher")))
+ggplot(nzis2, aes(x = income, colour = qualification2)) +
+    geom_density() +
+    scale_x_continuous(trans = modulus_trans(0.2), label = dollar,
+                       breaks = mod_breaks(lambda = 0.2)) +
+    ggtitle("New Zealand Income Survey 2011") +
+    scale_colour_brewer("", palette = "Set1") +
+    geom_rug() +
+    labs(x = "Weekly income") +
+    theme(legend.position = c(0.2, 0.8)) 
+```
+
+## This is good {data-transition="fade-out"}
+```{r}
+nzis2 %>%
+    ggplot(aes(x = hours, y = income)) +
+    geom_point(alpha = 0.2) +
+    scale_y_continuous("Weekly income",
+                       trans = modulus_trans(0.2), label = dollar,
+                       breaks = mod_breaks(lambda = 0.2)) +
+    scale_x_sqrt("Hours worked") +
+    ggtitle("New Zealand Income Survey 2011")
+```
+
+
+## But this is better {data-transition="fade-in"}
+```{r}
+nzis2 %>%
+    ggplot(aes(x = hours, y = income, colour = sex)) +
+    geom_point(alpha = 0.3) +
+    geom_smooth(se = FALSE, span = 0.5, method = "rlm") +
+    facet_wrap(~occupation) +
+    scale_y_continuous("Weekly income",
+                       trans = modulus_trans(0.2), label = dollar,
+                       breaks = mod_breaks(lambda = 0.2)) +
+    scale_x_sqrt("Hours worked") +
+    scale_colour_brewer("", palette = "Set1") +
+    theme(legend.position = c(0.8, 0.2), 
+            strip.text = element_text(size = 8)) +
+    ggtitle("New Zealand Income Survey 2011") 
+```
+
+# More detailed examples
+## Perception of quantity
+
+From best to worst
+
+1. Position
+2. Length
+3. Area
+4. Volume
+5. Area and slope
+6. Colour and density
+
+
+## Typical stacked bars...    {data-transition="fade-out"}
 
 ```{r}
 library(likert)
@@ -286,10 +412,10 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
           legend.text = element_text(size = 8))
 ```
 
-## Better colours    {data-transition="fade"}
+## Sequential    colours    {data-transition="fade"}
 ```{r}
 ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
-    geom_bar(position = "stack") +
+    geom_bar(position = "stack", colour = "grey80") +
     scale_y_continuous("", label = percent) +
     scale_fill_brewer("", palette = "Greens") +
     labs(x = "") +
@@ -301,7 +427,7 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
 ## Diverging scale    {data-transition="fade"}
 ```{r}
 ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
-    geom_bar(position = "stack") +
+    geom_bar(position = "stack", colour = "grey80") +
     scale_y_continuous("", label = percent) +
     scale_fill_brewer("", palette = "BrBG") +
     labs(x = "") +
@@ -312,7 +438,9 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
 
 ## Use position     {data-transition="fade"}
 ```{r}
-plot(l29)
+plot(l29) +    
+    theme(legend.text = element_text(size = 8)) +
+    theme(legend.title = element_blank())
 ```
 
 ## Much better than     {data-transition="fade-in"}
@@ -324,19 +452,6 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
     labs(x = "")
 ```
 
-
-## Perception of quantity
-
-From best to worst
-
-1. Position
-2. Length
-3. Area
-4. Volume
-5. Area and slope
-6. Colour and density
-
-# Example
 
 ## Cluttered    {data-transition="fade-out"}
 ```{r}
@@ -602,10 +717,11 @@ REGC2013 %>%
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-## Principles
+## More principles
 
 - Use order / position on page
-- Choose geom to mkae comparison easy
+- As multivariate and comparative as possible
+- Choose right geom to make comparison easy
 - Use colour to make comparison easy
 - Avoid strobing and similar unfortunate effects
 
@@ -755,7 +871,7 @@ ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
           axis.ticks.y = element_blank())
 ```
 
-## Principles
+## More principles
 
 - Don't rely on angle and slope - use position instead
 - Minimise non-data ink
@@ -808,8 +924,22 @@ itm %>%
              family = "Calibri", colour = "grey50")
 ```
 
-## Principles
+## Last set of tips
 
 - Don't be afraid of using a statistical transform to make the data meaningful
 - Discrete annotations, but which don't take the foreground from the data
 - Lots of subtlety in colour (shades of grey) to allow focus on data
+
+
+## Final word 
+
+- Comparative
+- Multivariate
+- High data density
+- Reveal interactions and comparisons
+- Nearly all the ink is data ink
+- All attention to the data and to the story!
+
+![image](images/data-science.png)
+
+
