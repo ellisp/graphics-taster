@@ -26,11 +26,11 @@ library(rgdal)
 library(maptools)
 library(extrafont)
 library(ggrepel)
-library(mbieDBmisc)
 library(RODBC)
 library(car) # for vif()
 library(GGally) # for ggpairs
 library(ggseas)
+library(nzcensus) # for maps of NZ, see https://github.com/ellisp/nzelect
 source("helpers.R")
 theme_set(theme_solarized(base_family = "Calibri") +
     theme(panel.background = element_blank(),
@@ -98,10 +98,10 @@ coordinates(df_deaths) <- ~coords.x1 + coords.x2
 proj4string(df_deaths) <- CRS("+init=epsg:27700") 
 df_deaths = spTransform(df_deaths,CRS("+proj=longlat +datum=WGS84"))
 
-get_london <- get_map(c(-.137,51.513), zoom = 16, maptype = "toner-lite")
-london <- ggmap(get_london)
+get_london <- get_stamenmap(c(-.141, 51.5115, -0.132, 51.5155), zoom = 17)
+
 print(
-london + 
+ggmap(get_london) + 
     geom_jitter(data=data.frame(df_deaths@coords), 
                 aes(x=coords.x1, y=coords.x2),
                 col="red", alpha = 0.5, size = 2) +
@@ -182,12 +182,11 @@ cat("<\\tiny>")
 ```{r}
 load("data/TAGDP_public.rda")
 load("data/mtagdp_totals.rda")
-library(mbiemaps)
 library(mgcv)
 library(directlabels)
 library(RColorBrewer)
 
-data(ta_simpl_gg)
+
 snapshot_2005 <- TAGDP_public %>%
     group_by(TA) %>%
     summarise(Ag2005 = sum(GDP[Year == 2005 & RGDP_industry == "Agriculture"])/ 
@@ -203,20 +202,25 @@ combined <- totals %>%
     left_join(snapshot_2005)
 
 
+cagr <- function(start, finish, years){
+  (finish / start) ^ (1 / years) - 1
+}
 
+ta_centres <- select(TA2013, TA = TA2013_NAM, WGS84Longitude, WGS84Latitude) |>
+  as_tibble()
 
 the_data <- combined %>%
     ungroup() %>%
     group_by(TA) %>%
     summarise(Ag2005 = unique(Ag2005),
-              CAGR10 = CAGR(GDP_real[Year == 2015] / GDP_real[Year == 2005], 10) / 100,
+              CAGR10 = cagr(GDP_real[Year == 2005], GDP_real[Year == 2015], 10),
               GDPpp2005 = unique(GDPpp2005)) %>%
-    rename(FULLNAME = TA) %>%
-    left_join(distinct(ta_simpl_gg[ , c("long.centre", "lat.centre", "FULLNAME")])) %>%
-    mutate(TA = gsub(" District", "", FULLNAME),
+    left_join(ta_centres) %>%
+    mutate(TA = gsub(" District", "", TA),
            TA = gsub(" City", "", TA),
-           outlier = ifelse(CAGR10 > 0.05 | CAGR10 < -0.02, TA, ""))
-
+           outlier = ifelse(CAGR10 > 0.05 | CAGR10 < -0.02, TA, "")) |>
+  rename(long.centre = WGS84Longitude, lat.centre = WGS84Latitude)
+stopifnot(sum(is.na(the_data$lat.centre)) == 0)
 
 model_spatial <- gam(CAGR10 ~ s(long.centre, lat.centre), data = the_data)
 the_data$pred <- fitted(model_spatial)
@@ -232,7 +236,7 @@ ggplot(the_grid, aes(x = long.centre, y = lat.centre, z = pred * 100)) +
     geom_raster(aes(fill = pred), interpolate = TRUE) +
     geom_contour(aes(colour = ..level.. )) +
     borders("nz", colour = "grey20") +
-    mbie::theme_nothing(base_family = "Calibri") +
+    theme_void(base_family = "Calibri") +
     coord_equal() +
     ggtitle("Economic growth 2005 - 2015") +
     scale_fill_gradientn("Average annual\ngrowth", colours = brewer.pal(8, "RdYlBu"), label = percent),
