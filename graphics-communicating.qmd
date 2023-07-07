@@ -34,6 +34,7 @@ library(RODBC)
 library(car) # for vif()
 library(GGally) # for ggpairs
 library(ggseas)
+library(knitr)
 library(sf)
 #library(nzcensus) # for maps of NZ, see https://github.com/ellisp/nzelect
 library(spcstyle)

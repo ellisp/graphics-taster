@@ -27,3 +27,7 @@ data/IVS/*
 *.zip
 
 data/shapefiles/
+
+graphics-communicating_cache/*
+graphics-communicating_files/*
+*.html
