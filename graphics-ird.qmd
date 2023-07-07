@@ -6,6 +6,7 @@ title-slide-attributes:
 author: "Peter Ellis"
 organization: "Pacific Community (SPC)"
 date: "July 2023"
+date-format: "MMMM YYYY"
 format: 
   revealjs:
     incremental: false
