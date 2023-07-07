@@ -1,6 +1,6 @@
-library(knitr)
-library(rmarkdown)
+
+library(quarto)
 
 
-render("graphics-ird.Rmd")
+quarto_render("graphics-ird.qmd")
 
