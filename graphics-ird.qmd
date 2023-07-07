@@ -1,5 +1,8 @@
 ---
 title: "Statistical graphics for communicating"
+title-slide-attributes:
+  data-background-image: /images/spc-background.png
+  data-background-size: contain
 author: "Peter Ellis"
 organization: "Pacific Community (SPC)"
 date: "July 2023"
@@ -9,6 +12,7 @@ format:
     logo: images/SPC-CPS-logo_27_stars.png
     theme: default
     css: presso.css
+    
 ---
 
 ```{r setup, include=FALSE}
@@ -51,11 +55,10 @@ load("data/ta2014.rda")
 
 # Purposes of graphics  {data-background="images/spc-background.png"}
 
-## Data science workflow  {data-background="images/spc-background.png"}
+## Different parts of the workflow {data-background="images/spc-background.png"}
 
-![datascience](images/data-science.png)
+![](images/gsbpm.png)
 
-Grolemund and Wickham, http://r4ds.had.co.nz/introduction.html
 
 
 ## Different purposes {data-background="images/spc-background.png"}
@@ -66,13 +69,13 @@ Grolemund and Wickham, http://r4ds.had.co.nz/introduction.html
 
 ...presentation...
 
-## Comprehend this: {data-transition="fade-out" data-background="images/spc-background.png"}
+## Try to take this in: {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r echo = TRUE}
 data(anscombe)
 anscombe[ , c(1,5,2,6,3,7,4,8)]
 ```
 
-## compared to:  {data-transition="fade" data-background="images/spc-background.png"}
+## Compared to this:  {data-transition="fade" data-background="images/spc-background.png"}
 
 ```{r}
 # pinched from https://gist.github.com/amoeba/7576126
@@ -132,7 +135,7 @@ ggpairs(au[sample(1:nrow(au), 300) , 1:6],
 
 ```
 
-## present results {data-background="images/spc-background.png"}
+## Or to present results {data-background="images/spc-background.png"}
 ```{r}
 
 mod2 <- glm(MedianIncome ~ ., data = au, family = quasi(link = "log"))
@@ -146,37 +149,40 @@ coefs <- data.frame(est = coef(mod2),
    mutate(variable = gsub("Prop", "", variable)) |>
    mutate(variable = factor(variable, levels = variable))
    
-ggplot(coefs, aes(x = variable, ymin = lower, ymax = upper, y = est)) + 
-   geom_hline(yintercept = 0, colour = "lightblue") +
+# we don't want to show it all as too cluttered so knock out some smaller ones
+threshold <- 0.5
+
+coefs_subset <- coefs |>
+  filter(lower < -threshold | upper > threshold)
+
+coefs_subset |>
+  ggplot(aes(y = variable, xmin = lower, xmax = upper, x = est)) + 
+   geom_vline(xintercept = 0, colour = "lightblue") +
    geom_linerange(aes(colour = est), size = 1.1) +
    geom_text(aes(label = variable), size = 3, family = "Calibri", vjust = 0, 
-             nudge_x = 0.15, colour = "grey40") +
-   coord_flip() +
-   labs(y = "\nHorizontal lines show 95% confidence interval of impact on median income.",
-        x = "") +
+             nudge_y = 0.15, colour = "grey40") +
+   labs( x= "\nHorizontal lines show 95% confidence interval of impact on median income.",
+        y = "") +
    ggtitle("Census characteristics relationship to median income",
       subtitle = "New Zealand 2013 Census area units data") +
    theme(axis.text.y = element_blank(),
          axis.ticks.y = element_blank()) +
-   annotate("text", y = -1.5, x = 6, label = "Lower income", 
+   annotate("text", x = -1.5, y = nrow(coefs_subset) * 0.5, label = "Lower income", 
             colour = "darkred", family = "Calibri") +
-   annotate("text", y = 1.5, x = 31, label = "Higher income", 
+   annotate("text", x = 1.5, y = nrow(coefs_subset) * 0.5, label = "Higher income", 
             colour = "darkblue", family = "Calibri") +
     scale_colour_gradientn(colours = c("red", "grey10", "blue"), guide = "none")
 ```
 
-## Compare to {data-background="images/spc-background.png"}
-```{r echo = FALSE, results = 'asis'}
-library(stargazer)
-cat("<tiny>")
-stargazer(mod2, type = "html")
-cat("<\\tiny>")
+## Compared to this: {data-background="images/spc-background.png" .smaller}
+```{r }
+kable(summary(mod2)$coefficients)
 ```
 
 
 
 ## Illustrate concepts {data-background="images/spc-background.png"}
-![animation1](regression_n_small.gif)
+![](regression_n_small.gif)
 
 ## Let user play with parameters {data-background="images/spc-background.png"}
 <iframe width="980" height="700" src="https://ellisp.shinyapps.io/individual-vote-nzes/" style = "overflow-y: hidden;"></iframe>
@@ -244,11 +250,10 @@ ggplot(the_data) +
 # Graphic excellence {data-background="images/spc-background.png"}
 
 ## Principles {data-background="images/spc-background.png"}
-- *well-designed* presentation of interesting data - *substance, statistics, and design*
-- *complex ideas* communicated with *clarity, precision*, and *efficiency*
-- *greatest number* of ideas in the *shortest time* with the *least ink* in the *smallest space*
-- nearly always *multivariate*
-- *telling the truth* about the data
+- **well-designed** presentation of interesting data - *substance, statistics, and design*
+- **complex ideas** communicated with *clarity, precision*, and *efficiency*
+- **greatest number** of ideas in the *shortest time* with the *least ink* in the *smallest space*
+- **telling the truth** about the data
 
 *Adapted from Tufte*
 
@@ -312,7 +317,7 @@ ggplot(nzis, aes(x = income)) +
 ```
 
 
-## But this is better {data-transition="fade-in" data-background="images/spc-background.png"}
+## But this might be better {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 nzis2 <- nzis |>
     mutate(qualification2 = ifelse(qualification == "None", "No qualification",
@@ -344,7 +349,7 @@ nzis2 |>
 ```
 
 
-## But this is better {data-transition="fade-in" data-background="images/spc-background.png"}
+## But this might be better {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 nzis2 |>
     ggplot(aes(x = hours, y = income, colour = sex)) +
@@ -584,12 +589,12 @@ p +
     theme(axis.title.y = element_text(colour = "black", face= "bold"))
 ```
 
-## Principles { data-background="images/spc-background.png"}
+## Remember those principles { data-background="images/spc-background.png"}
 
 - Remove all unnecessary ink
 - Focus on the data
 
-# Example { data-background="images/spc-background.png"}
+# Another improvement example { data-background="images/spc-background.png"}
 ## Original  {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 load("data/REGC2013.rda")
@@ -681,8 +686,6 @@ REGC2013 |>
 
 ## Another dimension {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
-circlecol <- "steelblue"
-
 ni <- c("Northland", "Hawke's Bay", "Taranaki", "Manawatu-Wanganui", "Waikato",
         "Auckland", "Wellington", "Gisborne", "Bay of Plenty") 
 REGC2013 |>
@@ -691,7 +694,7 @@ REGC2013 |>
                          ifelse(REGC2013_N == "Area Outside",
                                 "Other", "South Island"))) |>
   ggplot(aes(x = PropAgForFish2013, y = PropSmoker2013, color = island)) +
-  geom_smooth(method = "lm", se = FALSE, colour = "lightblue") +
+  geom_smooth(method = "lm", se = FALSE, colour = "lightgrey") +
   geom_text_repel(aes(label = REGC2013_N),
                    segment.size = 1,
                   segment.color = "grey70", family = "Calibri") +
@@ -714,7 +717,7 @@ REGC2013 |>
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-## More principles { data-background="images/spc-background.png"}
+## More lessons from that: { data-background="images/spc-background.png"}
 
 - Use order / position on page
 - As multivariate and comparative as possible
@@ -722,7 +725,7 @@ REGC2013 |>
 - Use colour to make comparison easy
 - Avoid strobing and similar unfortunate effects
 
-# Improvement example 3 { data-background="images/spc-background.png"}
+# Another improvement example { data-background="images/spc-background.png"}
 
 ## Difficult {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
@@ -935,7 +938,5 @@ itm |>
 - Reveal interactions 
 - Nearly all the ink is data ink
 - All attention to the data and to the story!
-
-![image](images/data-science.png)
 
 
