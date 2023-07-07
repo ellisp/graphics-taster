@@ -4,8 +4,10 @@ author: "Peter Ellis"
 date: "June 2016"
 output:
   revealjs::revealjs_presentation:
+    title-slide-attributes:
+      data-background-image: images/spc-background.png
     fig_height: 6
-    theme: sky
+    theme: simple
     includes:
       in_header: header.css
 ---
@@ -40,22 +42,22 @@ load("data/AreaUnits2013.rda")
 ```
 
 
-## Today's content
+## Today's content {data-background="images/spc-background.png"}
 
 - Different purposes of graphics
 - What makes graphics excellence
 - Improving graphics
 
-# Purposes of graphics
+# Purposes of graphics  {data-background="images/spc-background.png"}
 
-## Data science workflow
+## Data science workflow  {data-background="images/spc-background.png"}
 
 ![datascience](images/data-science.png)
 
 Grolemund and Wickham, http://r4ds.had.co.nz/introduction.html
 
 
-## Different purposes
+## Different purposes {data-background="images/spc-background.png"}
 
 ...exploratory...
 
@@ -63,13 +65,13 @@ Grolemund and Wickham, http://r4ds.had.co.nz/introduction.html
 
 ...presentation...
 
-## Comprehend this: {data-transition="fade-out"}
+## Comprehend this: {data-transition="fade-out"} {data-background="images/spc-background.png"}
 ```{r echo = TRUE}
 data(anscombe)
 anscombe[ , c(1,5,2,6,3,7,4,8)]
 ```
 
-## compared to:  {data-transition="fade"}
+## compared to:  {data-transition="fade"} {data-background="images/spc-background.png"}
 
 ```{r}
 # pinched from https://gist.github.com/amoeba/7576126
@@ -89,7 +91,7 @@ ggplot(anscombe_m, aes(x = x, y = y)) +
 ```
 
 
-## Put the data in its place
+## Put the data in its place {data-background="images/spc-background.png"}
 ```{r}
 deaths <- readShapePoints("data/SnowGIS/Cholera_Deaths")
 df_deaths <- data.frame(deaths@coords)
@@ -109,7 +111,7 @@ ggmap(get_london) +
 )
 ```
 
-## Use during analysis
+## Use during analysis {data-background="images/spc-background.png"}
 ```{r}
 
 au <- AreaUnits2013[ , -(1:2)]
@@ -129,7 +131,7 @@ ggpairs(au[sample(1:nrow(au), 300) , 1:6],
 
 ```
 
-## present results
+## present results {data-background="images/spc-background.png"}
 ```{r}
 
 mod2 <- glm(MedianIncome ~ ., data = au, family = quasi(link = "log"))
@@ -162,7 +164,7 @@ ggplot(coefs, aes(x = variable, ymin = lower, ymax = upper, y = est)) +
     scale_colour_gradientn(colours = c("red", "grey10", "blue"), guide = "none")
 ```
 
-## Compare to
+## Compare to {data-background="images/spc-background.png"}
 ```{r echo = FALSE, results = 'asis'}
 library(stargazer)
 cat("<tiny>")
@@ -172,13 +174,13 @@ cat("<\\tiny>")
 
 
 
-## Illustrate concepts
+## Illustrate concepts {data-background="images/spc-background.png"}
 ![animation1](regression_n_small.gif)
 
-## Let user play with parameters
+## Let user play with parameters {data-background="images/spc-background.png"}
 <iframe width="980" height="700" src="https://ellisp.shinyapps.io/individual-vote-nzes/" style = "overflow-y: hidden;"></iframe>
 
-## Simplify results
+## Simplify results {data-background="images/spc-background.png"}
 ```{r}
 load("data/TAGDP_public.rda")
 load("data/mtagdp_totals.rda")
@@ -238,9 +240,9 @@ ggplot(the_data) +
 
 
 
-# Graphic excellence
+# Graphic excellence {data-background="images/spc-background.png"}
 
-## Principles
+## Principles {data-background="images/spc-background.png"}
 - *well-designed* presentation of interesting data - *substance, statistics, and design*
 - *complex ideas* communicated with *clarity, precision*, and *efficiency*
 - *greatest number* of ideas in the *shortest time* with the *least ink* in the *smallest space*
@@ -249,16 +251,16 @@ ggplot(the_data) +
 
 *Adapted from Tufte*
 
-## Some specifics
+## Some specifics {data-background="images/spc-background.png"}
 - Comparative
 - Multivariate
 - Reveal interactions 
 - Nearly all the ink is data ink
 
-# Examples
+# Examples {data-background="images/spc-background.png"}
 
 
-## Change this... {data-transition="fade-out"}
+## Change this... {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 n <- 8
 set.seed(124)
@@ -279,7 +281,7 @@ ggplot(comp_data, aes(x = when, weight = timing, fill = trial)) +
 
 ```
 
-## ...to this: {data-transition="fade-in"}
+## ...to this: {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 comp_data %>%
     mutate(when = ifelse(when == "Before", -1, 1)) %>%
@@ -297,7 +299,7 @@ comp_data %>%
           plot.background =  element_rect(fill = "#fdf6e3", colour = NA))
 ```
 
-## This is good {data-transition="fade-out"}
+## This is good {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 ggplot(nzis, aes(x = income)) +
     geom_density() +
@@ -309,7 +311,7 @@ ggplot(nzis, aes(x = income)) +
 ```
 
 
-## But this is better {data-transition="fade-in"}
+## But this is better {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 nzis2 <- nzis %>%
     mutate(qualification2 = ifelse(qualification == "None", "No qualification",
@@ -328,7 +330,7 @@ ggplot(nzis2, aes(x = income, colour = qualification2)) +
     theme(legend.position = c(0.2, 0.8)) 
 ```
 
-## This is good {data-transition="fade-out"}
+## This is good {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 nzis2 %>%
     ggplot(aes(x = hours, y = income)) +
@@ -341,7 +343,7 @@ nzis2 %>%
 ```
 
 
-## But this is better {data-transition="fade-in"}
+## But this is better {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 nzis2 %>%
     ggplot(aes(x = hours, y = income, colour = sex)) +
@@ -358,8 +360,8 @@ nzis2 %>%
     ggtitle("New Zealand Income Survey 2011") 
 ```
 
-# More detailed examples
-## Perception of quantity
+# More detailed examples {data-background="images/spc-background.png"}
+## Perception of quantity {data-background="images/spc-background.png"}
 
 From best to worst
 
@@ -371,7 +373,7 @@ From best to worst
 6. Colour and density
 
 
-## Typical stacked bars...    {data-transition="fade-out"}
+## Typical stacked bars...    {data-transition="fade-out" data-background="images/spc-background.png"}
 
 ```{r}
 library(likert)
@@ -392,7 +394,7 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
 
 ```
 
-## Orient for easy reading    {data-transition="fade"}
+## Orient for easy reading    {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
     geom_bar(position = "stack") +
@@ -404,7 +406,7 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
           legend.text = element_text(size = 8))
 ```
 
-## Sequential    colours    {data-transition="fade"}
+## Sequential    colours    {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
     geom_bar(position = "stack", colour = "grey80") +
@@ -416,7 +418,7 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
           legend.text = element_text(size = 8))
 ```
 
-## Diverging scale    {data-transition="fade"}
+## Diverging scale    {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
     geom_bar(position = "stack", colour = "grey80") +
@@ -428,14 +430,14 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
           legend.text = element_text(size = 8))
 ```
 
-## Use position     {data-transition="fade"}
+## Use position     {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 plot(l29) +    
     theme(legend.text = element_text(size = 8)) +
     theme(legend.title = element_blank())
 ```
 
-## Much better than     {data-transition="fade-in"}
+## Much better than     {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
     geom_bar(position = "stack") +
@@ -445,7 +447,7 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
 ```
 
 
-## Cluttered    {data-transition="fade-out"}
+## Cluttered    {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 library(WDI)
 
@@ -484,7 +486,7 @@ p +
     theme(axis.title.y = element_text(colour = "black", face= "bold"))
 ```
 
-## Minimal axis guides {data-transition="fade-out"}
+## Minimal axis guides {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 p + 
     theme(plot.background = element_rect(colour = "black", size = 3, linetype = 1)) +
@@ -493,25 +495,25 @@ p +
 ```
 
 
-## Fade axis title    {data-transition="fade"}
+## Fade axis title    {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p + 
     theme(plot.background = element_rect(colour = "black", size = 3, linetype = 1)) 
 ```
 
-## Remove borders    {data-transition="fade"}
+## Remove borders    {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p 
 ```
 
 
-## Remove boxes   {data-transition="fade"}
+## Remove boxes   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p + theme(legend.background = element_rect(colour = NA),
           panel.border = element_rect(colour = NA))
 ```
 
-## Guidelines to back   {data-transition="fade"}
+## Guidelines to back   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p + 
     theme(legend.background = element_rect(colour = NA),
@@ -519,7 +521,7 @@ p +
           panel.grid.major.y = element_line(colour = "grey98")) 
 ```
 
-## Background to back   {data-transition="fade"}
+## Background to back   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p + 
     theme(legend.background = element_rect(colour = NA),
@@ -528,7 +530,7 @@ p +
           panel.grid.major.y = element_line(colour = "grey98")) 
 ```
 
-## Consistent doc theme   {data-transition="fade"}
+## Consistent doc theme   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p + theme_solarized() +
     theme(panel.background = element_blank()) +
@@ -536,7 +538,7 @@ p + theme_solarized() +
           strip.background = element_rect(colour = NA, fill = stripcolour))
 ```
 
-## Consistent font   {data-transition="fade"}
+## Consistent font   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p + theme_solarized(base_family = "Calibri") +
     theme(panel.background = element_blank()) +
@@ -544,7 +546,7 @@ p + theme_solarized(base_family = "Calibri") +
           strip.background = element_rect(colour = NA, fill = stripcolour))
 ```
 
-## Corporate colours   {data-transition="fade"}
+## Corporate colours   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p + theme_solarized(base_family = "Calibri") +
     theme(panel.background = element_blank()) +
@@ -553,7 +555,7 @@ p + theme_solarized(base_family = "Calibri") +
     scale_colour_manual(values = spc_cols(c(1, 3)))
 ```
 
-## Direct labels   {data-transition="fade"}
+## Direct labels   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 labs <- data.frame(
     year = c(1983, 1989),
@@ -572,7 +574,7 @@ p + theme_solarized(base_family = "Calibri") +
 ```
 
 
-## Much better than: {data-transition="fade"}
+## Much better than: {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p + 
     facet_wrap(~country, scales = "free") +
@@ -581,13 +583,13 @@ p +
     theme(axis.title.y = element_text(colour = "black", face= "bold"))
 ```
 
-## Principles
+## Principles { data-background="images/spc-background.png"}
 
 - Remove all unnecessary ink
 - Focus on the data
 
-# Example
-## Original  {data-transition="fade-out"}
+# Example { data-background="images/spc-background.png"}
+## Original  {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 load("data/REGC2013.rda")
 REGC2013 <- REGC2013[complete.cases(REGC2013), ]
@@ -600,7 +602,7 @@ REGC2013 %>%
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-## User-friendly labels {data-transition="fade"}
+## User-friendly labels {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 REGC2013 %>%
     mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
@@ -613,7 +615,7 @@ REGC2013 %>%
     labs(x = "", fill = "Variable")
 ```
 
-## Horizontal text {data-transition="fade"}
+## Horizontal text {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 REGC2013 %>%
     mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
@@ -626,7 +628,7 @@ REGC2013 %>%
     coord_flip()
 ```
 
-## Meaningful ordering {data-transition="fade-in"}
+## Meaningful ordering {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 REGC2013 %>%
     mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
@@ -641,7 +643,7 @@ REGC2013 %>%
     coord_flip()
 ```
 
-## Better shape and geom {data-transition="fade-out"}
+## Better shape and geom {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 REGC2013 %>%
     mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
@@ -651,7 +653,7 @@ REGC2013 %>%
     scale_x_continuous("Working in agriculture, forestry and fishing", label = percent) 
 ```
 
-## Labels on points {data-transition="fade"}
+## Labels on points {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 REGC2013 %>%
     mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
@@ -662,7 +664,7 @@ REGC2013 %>%
     scale_x_continuous("Working in agriculture, forestry and fishing", label = percent) 
 ```
 
-## Title and annotation {data-transition="fade"}
+## Title and annotation {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 REGC2013 %>%
     mutate(REGC2013_N = gsub(" Region", "", REGC2013_N)) %>%
@@ -676,7 +678,7 @@ REGC2013 %>%
             subtitle = "New Zealand 2013 census")
 ```
 
-## Another dimension {data-transition="fade-in"}
+## Another dimension {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 circlecol <- "steelblue"
 
@@ -699,7 +701,7 @@ REGC2013 %>%
             subtitle = "New Zealand 2013 census")
 ```
 
-## Better than:  {data-transition="fade-in"}
+## Better than:  {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r namedchunk}
 REGC2013 %>%
     select(REGC2013_N, PropSmoker2013, PropAgForFish2013) %>%
@@ -710,7 +712,7 @@ REGC2013 %>%
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-## More principles
+## More principles { data-background="images/spc-background.png"}
 
 - Use order / position on page
 - As multivariate and comparative as possible
@@ -718,9 +720,9 @@ REGC2013 %>%
 - Use colour to make comparison easy
 - Avoid strobing and similar unfortunate effects
 
-# Improvement example 3
+# Improvement example 3 { data-background="images/spc-background.png"}
 
-## Difficult {data-transition="fade-out"}
+## Difficult {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 # IVS up to 2020
 if(!file.exists("data/ivs.zip")){
@@ -748,7 +750,7 @@ ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
           axis.ticks.y = element_blank())
 ```
 
-## Use cartesian coordinates {data-transition="fade"}
+## Use cartesian coordinates {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
     geom_bar(position = "stack", colour = "grey75") +
@@ -759,7 +761,7 @@ ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
     scale_fill_discrete(guide = guide_legend(reverse=TRUE))
 ```
 
-## Use height {data-transition="fade"}
+## Use height {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ggplot(ivs, aes(x = country, weight = spend, fill = country)) +
     geom_bar() +
@@ -770,7 +772,7 @@ ggplot(ivs, aes(x = country, weight = spend, fill = country)) +
     theme(legend.position = "none")
 ```
 
-## Flip for readability {data-transition="fade"}
+## Flip for readability {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ggplot(ivs, aes(x = country, weight = spend, fill = country)) +
     geom_bar() +
@@ -782,7 +784,7 @@ ggplot(ivs, aes(x = country, weight = spend, fill = country)) +
     coord_flip()
 ```
 
-## Sequence {data-transition="fade"}
+## Sequence {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ivs %>%
      mutate(country = fct_reorder(country, spend)) %>%
@@ -796,7 +798,7 @@ ivs %>%
      coord_flip()
 ```
 
-## Maximise focus on data {data-transition="fade"}
+## Maximise focus on data {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ivs %>%
     arrange(spend) %>%
@@ -810,7 +812,7 @@ ivs %>%
      labs(y = "", x = "Millions of dollars") 
 ```
 
-## Labels near the data {data-transition="fade"}
+## Labels near the data {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ivs %>%
     arrange(spend) %>%
@@ -828,7 +830,7 @@ ivs %>%
           axis.ticks.y = element_blank())
 ```
 
-## Use like a table {data-transition="fade"}
+## Use like a table {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ivs %>%
     arrange(spend) %>%
@@ -846,7 +848,7 @@ ivs %>%
     theme(axis.text.y = element_blank())
 ```
 
-## Better than  {data-transition="fade-in"}
+## Better than  {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
     geom_bar(position = "stack", colour = "grey75") +
@@ -859,7 +861,7 @@ ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
           axis.ticks.y = element_blank())
 ```
 
-## More principles
+## More principles { data-background="images/spc-background.png"}
 
 - Don't rely on angle and slope - use position instead
 - Minimise non-data ink
@@ -868,9 +870,9 @@ ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
 
 
 
-# Statistical transformations
+# Statistical transformations { data-background="images/spc-background.png"}
 
-## Not just this {data-transition="fade-out"}
+## Not just this {data-transition="fade-out" data-background="images/spc-background.png"}
 ```{r}
 itm <- read_csv("data/ITM330701_20230707_121953_98.csv", skip = 1) |>
   rename(ym = `...1`,
@@ -892,12 +894,12 @@ p2 + scale_y_continuous(label = comma)
 
 
 
-## But this {data-transition="fade"}
+## But this {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 p2 + scale_y_log10(label = comma, breaks = c(1000, 10000, 100000))
 ```
 
-## Or this {data-transition="fade-in"}
+## Or this {data-transition="fade-in" data-background="images/spc-background.png"}
 ```{r}
 itm %>%
     ggplot(aes(x = TimePeriod, y = value)) +
@@ -917,14 +919,14 @@ itm %>%
              family = "Calibri", colour = "grey50")
 ```
 
-## Last set of tips
+## Last set of tips { data-background="images/spc-background.png"}
 
 - Don't be afraid of using a statistical transform to make the data meaningful
 - Discrete annotations, but which don't take the foreground from the data
 - Lots of subtlety in colour (shades of grey) to allow focus on data
 
 
-## Final word 
+## Final word { data-background="images/spc-background.png"}
 
 - Comparative
 - Multivariate
