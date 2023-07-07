@@ -181,6 +181,7 @@ cat("<\\tiny>")
 ```{r}
 load("data/TAGDP_public.rda")
 load("data/mtagdp_totals.rda")
+
 library(mgcv)
 library(directlabels)
 library(RColorBrewer)
@@ -205,42 +206,30 @@ cagr <- function(start, finish, years){
   (finish / start) ^ (1 / years) - 1
 }
 
-ta_centres <- select(TA2013, TA = TA2013_NAM, WGS84Longitude, WGS84Latitude) |>
-  as_tibble()
-
-the_data <- combined %>%
+aggregated <- combined %>%
     ungroup() %>%
     group_by(TA) %>%
     summarise(Ag2005 = unique(Ag2005),
               CAGR10 = cagr(GDP_real[Year == 2005], GDP_real[Year == 2015], 10),
-              GDPpp2005 = unique(GDPpp2005)) %>%
-    left_join(ta_centres) %>%
+              GDPpp2005 = unique(GDPpp2005)) 
+
+the_data <- ta2014 |>
+  rename(TA = TA2014_NAM) |>
+  full_join(aggregated, by = "TA") |>
     mutate(TA = gsub(" District", "", TA),
            TA = gsub(" City", "", TA),
-           outlier = ifelse(CAGR10 > 0.05 | CAGR10 < -0.02, TA, "")) |>
-  rename(long.centre = WGS84Longitude, lat.centre = WGS84Latitude)
-stopifnot(sum(is.na(the_data$lat.centre)) == 0)
+           outlier = ifelse(CAGR10 > 0.05 | CAGR10 < -0.02, TA, "")) 
+stopifnot(sum(is.na(the_data$SHAPE_Area)) == 0)
 
-model_spatial <- gam(CAGR10 ~ s(long.centre, lat.centre), data = the_data)
-the_data$pred <- fitted(model_spatial)
-
-longs <- seq(min(the_data$long.centre) - 3, max(the_data$long.centre) + 1, length = 100)
-lats <- seq(min(the_data$lat.centre) - 1, max(the_data$lat.centre) + 1, length = 100)
-the_grid <- expand.grid(long.centre = longs, lat.centre = lats)
-the_grid$pred <- predict(model_spatial, newdata = the_grid)
-
-
-print(direct.label(
-ggplot(the_grid, aes(x = long.centre, y = lat.centre, z = pred * 100)) +
-    geom_raster(aes(fill = pred), interpolate = TRUE) +
-    geom_contour(aes(colour = ..level.. )) +
-    borders("nz", colour = "grey20") +
-    theme_void(base_family = "Calibri") +
-    coord_equal() +
-    ggtitle("Economic growth 2005 - 2015") +
-    scale_fill_gradientn("Average annual\ngrowth", colours = brewer.pal(8, "RdYlBu"), label = percent),
-method="bottom.pieces"
-))
+print(
+ggplot(the_data) +
+  geom_sf(aes(fill = CAGR10)) +
+  scale_fill_viridis_c(label = percent) +
+  theme_minimal(base_family = "Calibri") +
+  theme(legend.position = c(0.9, 0.2),
+        axis.text.x = element_blank()) +
+  labs(fill = "Ten year average\nGDP growth")
+)
 
 ```
 
@@ -262,8 +251,7 @@ method="bottom.pieces"
 ## Some specifics
 - Comparative
 - Multivariate
-- High data density
-- Reveal interactions and comparisons
+- Reveal interactions 
 - Nearly all the ink is data ink
 
 # Examples
@@ -939,8 +927,7 @@ itm %>%
 
 - Comparative
 - Multivariate
-- High data density
-- Reveal interactions and comparisons
+- Reveal interactions 
 - Nearly all the ink is data ink
 - All attention to the data and to the story!
 
