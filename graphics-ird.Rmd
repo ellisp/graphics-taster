@@ -14,10 +14,8 @@ output:
 stripcolour <- "grey93"
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE)
 library(MASS)
-library(dplyr)
-library(ggplot2)
+library(tidyverse)
 library(scales)
-library(tidyr)
 library(ggthemes)
 library(foreign)
 library(ggmap)
@@ -274,7 +272,7 @@ method="bottom.pieces"
 ```{r}
 n <- 8
 set.seed(124)
-comp_data <- data_frame(
+comp_data <- tibble(
     site = c(1:n, 1:n),
     when = factor(rep(c("Before", "After"), each = n), levels = c("Before", "After")), 
     trial = rep(c("Trial", "Control", "Trial", "Control"), each = n / 2), 
@@ -465,11 +463,13 @@ econ <- WDI(
          country = c("1W", "AU", "NZ", "US"), 
          indicator = c("FP.CPI.TOTL.ZG", "NY.GDP.MKTP.KD.ZG"),
          start = 1978)
-names(econ)[4:5] <- c("inflation_cpi", "gdp_growth")
+
 econ <- econ %>%
-    group_by(country) %>%
-    mutate(labyear = ifelse(year == max(year), max(year), ""),
-           labyear = ifelse(year == min(year), min(year), labyear))
+  rename(inflation_cpi = FP.CPI.TOTL.ZG,
+         gdp_growth = NY.GDP.MKTP.KD.ZG) |>
+  group_by(country) |>
+  mutate(labyear = ifelse(year == max(year), max(year), ""),
+         labyear = ifelse(year == min(year), min(year), labyear))
 
 
 p <- econ %>%
@@ -687,7 +687,7 @@ REGC2013 %>%
 
 ## Another dimension {data-transition="fade-in"}
 ```{r}
-circlecol <- mbie.cols(4)
+circlecol <- "steelblue"
 
 ni <- c("Northland", "Hawke's Bay", "Taranaki", "Manawatu-Wanganui", "Waikato",
         "Auckland", "Wellington", "Gisborne", "Bay of Plenty") 
@@ -704,8 +704,6 @@ REGC2013 %>%
     geom_point(size = 2) +
     scale_y_continuous("Smokers", label = percent) +
     scale_x_continuous("Working in agriculture, forestry and fishing", label = percent) +
-    scale_colour_manual("", values = mbie::mbie.cols()) +
-    scale_fill_manual("", values = mbie::mbie.cols()) +
     ggtitle("Smokers compared to agriculture-forestry-fishery workers",
             subtitle = "New Zealand 2013 census")
 ```
@@ -733,23 +731,19 @@ REGC2013 %>%
 
 ## Difficult {data-transition="fade-out"}
 ```{r}
-TRED <- odbcConnect("TRED_Prod")
-sql <- "
-SELECT
-sum(WeightedSpend * PopulationWeight) as spend,
-CORNextYR                             as country
-FROM
-vw_IVSSurveyMainHeader
-WHERE
-Year = 2015
-GROUP BY
-cornEXTyr
-"
+# IVS up to 2020
+if(!file.exists("data/ivs.zip")){
+  download.file("https://www.mbie.govt.nz/assets/Data-Files/IVS/vw_IVS.zip", destfile = "data/ivs.zip", mode = "wb")
+}
+unzip("data/ivs.zip", exdir = "data")
 
-ivs <- sqlQuery(TRED, sql) %>%
-    mutate(country = mbie::CountryGroup(country)) %>%
-    group_by(country) %>%
-    summarise(spend = sum(spend / 10 ^ 6))
+ivs_raw <- read_csv("data/IVS/vw_IVSSurveyMainHeader.csv") |>
+  filter(Year == 2015)
+
+ivs <- ivs_raw |>
+  mutate(country = fct_lump(CORNextYr, n = 10, w = PopulationWeight)) |>
+  group_by(country) |>
+  summarise(spend = sum(WeightedSpend * PopulationWeight) / 10 ^ 6)
 
 
 ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
@@ -800,8 +794,7 @@ ggplot(ivs, aes(x = country, weight = spend, fill = country)) +
 ## Sequence {data-transition="fade"}
 ```{r}
 ivs %>%
-     arrange(spend) %>%
-     mutate(country = factor(country, levels = country)) %>%
+     mutate(country = fct_reorder(country, spend)) %>%
      ggplot(aes(x = country, weight = spend, fill = country)) +
      geom_bar() +
      ggtitle("Tourist Spend in New Zealand 2015",
@@ -838,7 +831,7 @@ ivs %>%
               colour = "steelblue") +
     ggtitle("Tourist Spend in New Zealand 2015",
          subtitle = "International Visitor Survey") +
-    scale_x_continuous(label = dollar, limits = c(0, 1750)) +
+    scale_x_continuous(label = dollar, limits = c(0, 2750)) +
     labs(y = "", x = "Millions of dollars") +
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank())
@@ -857,7 +850,7 @@ ivs %>%
               colour = "steelblue") +
     ggtitle("Tourist Spend in New Zealand 2015",
          subtitle = "International Visitor Survey") +
-    scale_x_continuous(label = dollar, limits = c(0, 1750)) +
+    scale_x_continuous(label = dollar, limits = c(0, 2750)) +
     labs(y = "", x = "Millions of dollars") +
     theme(axis.text.y = element_blank())
 ```
@@ -888,10 +881,15 @@ ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
 
 ## Not just this {data-transition="fade-out"}
 ```{r}
-itm <- ImportTS2(TRED, "Visitor arrival totals (Monthly)",
-			where = "CV1 = 'Actual Counts'", silent = TRUE)
+itm <- read_csv("data/ITM330701_20230707_121953_98.csv", skip = 1) |>
+  rename(ym = `...1`,
+         value = `Actual Counts`) |>
+  filter(!is.na(value)) |>
+  mutate(y = substring(ym, 1, 4),
+         m = substring(ym, 6, 7),
+         TimePeriod = as.Date(paste(y, m, 15, sep = "-")))
 
-p2 <- ggplot(itm, aes(x = TimePeriod, y = Value)) +
+p2 <- ggplot(itm, aes(x = TimePeriod, y = value)) +
     geom_line() +
     labs(x = "", y = "",
          caption = "Source: International Travel and Migration, Statistics New Zealand") +
@@ -911,9 +909,9 @@ p2 + scale_y_log10(label = comma, breaks = c(1000, 10000, 100000))
 ## Or this {data-transition="fade-in"}
 ```{r}
 itm %>%
-    ggplot(aes(x = TimePeriod, y = Value)) +
+    ggplot(aes(x = TimePeriod, y = value)) +
     annotate("rect", xmin = as.Date("1939-09-01"), xmax = as.Date("1945-09-02"), 
-               ymin = min(itm$Value), ymax = 5000, fill = "orange", alpha = 0.3)  +
+               ymin = min(itm$value), ymax = 5000, fill = "orange", alpha = 0.3)  +
     geom_line(colour = "grey70") +
     labs(x = "", y = "",
          caption = "Source: International Travel and Migration, Statistics New Zealand") +
