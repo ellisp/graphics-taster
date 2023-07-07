@@ -25,3 +25,5 @@ graphics-ird_cache/
 graphics-ird_files/
 data/IVS/*
 *.zip
+
+data/shapefiles/
