@@ -14,10 +14,8 @@ output:
 stripcolour <- "grey93"
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE)
 library(MASS)
-library(dplyr)
-library(ggplot2)
+library(tidyverse)
 library(scales)
-library(tidyr)
 library(ggthemes)
 library(foreign)
 library(ggmap)
@@ -26,11 +24,12 @@ library(rgdal)
 library(maptools)
 library(extrafont)
 library(ggrepel)
-library(mbieDBmisc)
 library(RODBC)
 library(car) # for vif()
 library(GGally) # for ggpairs
 library(ggseas)
+library(nzcensus) # for maps of NZ, see https://github.com/ellisp/nzelect
+library(spcstyle)
 source("helpers.R")
 theme_set(theme_solarized(base_family = "Calibri") +
     theme(panel.background = element_blank(),
@@ -98,10 +97,10 @@ coordinates(df_deaths) <- ~coords.x1 + coords.x2
 proj4string(df_deaths) <- CRS("+init=epsg:27700") 
 df_deaths = spTransform(df_deaths,CRS("+proj=longlat +datum=WGS84"))
 
-get_london <- get_map(c(-.137,51.513), zoom = 16, maptype = "toner-lite")
-london <- ggmap(get_london)
+get_london <- get_stamenmap(c(-.141, 51.5115, -0.132, 51.5155), zoom = 17)
+
 print(
-london + 
+ggmap(get_london) + 
     geom_jitter(data=data.frame(df_deaths@coords), 
                 aes(x=coords.x1, y=coords.x2),
                 col="red", alpha = 0.5, size = 2) +
@@ -176,18 +175,19 @@ cat("<\\tiny>")
 ## Illustrate concepts
 ![animation1](regression_n_small.gif)
 
-## 
-<iframe width="980" height="700" src="https://ellisp.shinyapps.io/control-charts/" style = "overflow-y: hidden;"></iframe>
-##
+## Let user play with parameters
+<iframe width="980" height="700" src="https://ellisp.shinyapps.io/individual-vote-nzes/" style = "overflow-y: hidden;"></iframe>
+
+## Simplify results
 ```{r}
 load("data/TAGDP_public.rda")
 load("data/mtagdp_totals.rda")
-library(mbiemaps)
+
 library(mgcv)
 library(directlabels)
 library(RColorBrewer)
 
-data(ta_simpl_gg)
+
 snapshot_2005 <- TAGDP_public %>%
     group_by(TA) %>%
     summarise(Ag2005 = sum(GDP[Year == 2005 & RGDP_industry == "Agriculture"])/ 
@@ -203,45 +203,38 @@ combined <- totals %>%
     left_join(snapshot_2005)
 
 
+cagr <- function(start, finish, years){
+  (finish / start) ^ (1 / years) - 1
+}
 
-
-the_data <- combined %>%
+aggregated <- combined %>%
     ungroup() %>%
     group_by(TA) %>%
     summarise(Ag2005 = unique(Ag2005),
-              CAGR10 = CAGR(GDP_real[Year == 2015] / GDP_real[Year == 2005], 10) / 100,
-              GDPpp2005 = unique(GDPpp2005)) %>%
-    rename(FULLNAME = TA) %>%
-    left_join(distinct(ta_simpl_gg[ , c("long.centre", "lat.centre", "FULLNAME")])) %>%
-    mutate(TA = gsub(" District", "", FULLNAME),
+              CAGR10 = cagr(GDP_real[Year == 2005], GDP_real[Year == 2015], 10),
+              GDPpp2005 = unique(GDPpp2005)) 
+
+the_data <- ta2014 |>
+  rename(TA = TA2014_NAM) |>
+  full_join(aggregated, by = "TA") |>
+    mutate(TA = gsub(" District", "", TA),
            TA = gsub(" City", "", TA),
-           outlier = ifelse(CAGR10 > 0.05 | CAGR10 < -0.02, TA, ""))
+           outlier = ifelse(CAGR10 > 0.05 | CAGR10 < -0.02, TA, "")) 
+stopifnot(sum(is.na(the_data$SHAPE_Area)) == 0)
 
-
-model_spatial <- gam(CAGR10 ~ s(long.centre, lat.centre), data = the_data)
-the_data$pred <- fitted(model_spatial)
-
-longs <- seq(min(the_data$long.centre) - 3, max(the_data$long.centre) + 1, length = 100)
-lats <- seq(min(the_data$lat.centre) - 1, max(the_data$lat.centre) + 1, length = 100)
-the_grid <- expand.grid(long.centre = longs, lat.centre = lats)
-the_grid$pred <- predict(model_spatial, newdata = the_grid)
-
-
-print(direct.label(
-ggplot(the_grid, aes(x = long.centre, y = lat.centre, z = pred * 100)) +
-    geom_raster(aes(fill = pred), interpolate = TRUE) +
-    geom_contour(aes(colour = ..level.. )) +
-    borders("nz", colour = "grey20") +
-    mbie::theme_nothing(base_family = "Calibri") +
-    coord_equal() +
-    ggtitle("Economic growth 2005 - 2015") +
-    scale_fill_gradientn("Average annual\ngrowth", colours = brewer.pal(8, "RdYlBu"), label = percent),
-method="bottom.pieces"
-))
+print(
+ggplot(the_data) +
+  geom_sf(aes(fill = CAGR10)) +
+  scale_fill_viridis_c(label = percent) +
+  theme_minimal(base_family = "Calibri") +
+  theme(legend.position = c(0.9, 0.2),
+        axis.text.x = element_blank()) +
+  labs(fill = "Ten year average\nGDP growth")
+)
 
 ```
 
-## {data-background-video="rotating2.mp4"}
+## Grab attention {data-background-video="rotating2.mp4"}
 
 
 
@@ -259,8 +252,7 @@ method="bottom.pieces"
 ## Some specifics
 - Comparative
 - Multivariate
-- High data density
-- Reveal interactions and comparisons
+- Reveal interactions 
 - Nearly all the ink is data ink
 
 # Examples
@@ -270,7 +262,7 @@ method="bottom.pieces"
 ```{r}
 n <- 8
 set.seed(124)
-comp_data <- data_frame(
+comp_data <- tibble(
     site = c(1:n, 1:n),
     when = factor(rep(c("Before", "After"), each = n), levels = c("Before", "After")), 
     trial = rep(c("Trial", "Control", "Trial", "Control"), each = n / 2), 
@@ -457,16 +449,19 @@ ggplot(l29_df, aes(weight = value / 100, fill = Response, x = Item)) +
 ```{r}
 library(WDI)
 
-econ <- WDI(
-         country = c("1W", "AU", "NZ", "US"), 
-         indicator = c("FP.CPI.TOTL.ZG", "NY.GDP.MKTP.KD.ZG"),
-         start = 1978)
-names(econ)[4:5] <- c("inflation_cpi", "gdp_growth")
-econ <- econ %>%
-    group_by(country) %>%
+if(!exists("econ")){
+  econ <- WDI(
+           country = c("1W", "AU", "NZ", "US"), 
+           indicator = c("FP.CPI.TOTL.ZG", "NY.GDP.MKTP.KD.ZG"),
+           start = 1978)
+  
+  econ <- econ %>%
+    rename(inflation_cpi = FP.CPI.TOTL.ZG,
+           gdp_growth = NY.GDP.MKTP.KD.ZG) |>
+    group_by(country) |>
     mutate(labyear = ifelse(year == max(year), max(year), ""),
            labyear = ifelse(year == min(year), min(year), labyear))
-
+}
 
 p <- econ %>%
     ungroup() %>%
@@ -555,7 +550,7 @@ p + theme_solarized(base_family = "Calibri") +
     theme(panel.background = element_blank()) +
     theme(legend.position = "bottom",
           strip.background = element_rect(colour = NA, fill = stripcolour)) +
-    scale_colour_manual(values = mbie::mbie.cols(c(1, 3)))
+    scale_colour_manual(values = spc_cols(c(1, 3)))
 ```
 
 ## Direct labels   {data-transition="fade"}
@@ -571,7 +566,7 @@ p + theme_solarized(base_family = "Calibri") +
     theme(panel.background = element_blank()) +
     theme(legend.position = "none",
           strip.background = element_rect(colour = NA, fill = stripcolour)) +
-    scale_colour_manual(values = mbie::mbie.cols(c(1, 3))) +
+    scale_colour_manual(values = spc_cols(c(1, 3))) +
     geom_text(data = labs, aes(label = variable), family = "Calibri", 
               hjust = 0, size = 3)
 ```
@@ -683,7 +678,7 @@ REGC2013 %>%
 
 ## Another dimension {data-transition="fade-in"}
 ```{r}
-circlecol <- mbie.cols(4)
+circlecol <- "steelblue"
 
 ni <- c("Northland", "Hawke's Bay", "Taranaki", "Manawatu-Wanganui", "Waikato",
         "Auckland", "Wellington", "Gisborne", "Bay of Plenty") 
@@ -700,8 +695,6 @@ REGC2013 %>%
     geom_point(size = 2) +
     scale_y_continuous("Smokers", label = percent) +
     scale_x_continuous("Working in agriculture, forestry and fishing", label = percent) +
-    scale_colour_manual("", values = mbie::mbie.cols()) +
-    scale_fill_manual("", values = mbie::mbie.cols()) +
     ggtitle("Smokers compared to agriculture-forestry-fishery workers",
             subtitle = "New Zealand 2013 census")
 ```
@@ -729,23 +722,19 @@ REGC2013 %>%
 
 ## Difficult {data-transition="fade-out"}
 ```{r}
-TRED <- odbcConnect("TRED_Prod")
-sql <- "
-SELECT
-sum(WeightedSpend * PopulationWeight) as spend,
-CORNextYR                             as country
-FROM
-vw_IVSSurveyMainHeader
-WHERE
-Year = 2015
-GROUP BY
-cornEXTyr
-"
+# IVS up to 2020
+if(!file.exists("data/ivs.zip")){
+  download.file("https://www.mbie.govt.nz/assets/Data-Files/IVS/vw_IVS.zip", destfile = "data/ivs.zip", mode = "wb")
+}
+unzip("data/ivs.zip", exdir = "data")
 
-ivs <- sqlQuery(TRED, sql) %>%
-    mutate(country = mbie::CountryGroup(country)) %>%
-    group_by(country) %>%
-    summarise(spend = sum(spend / 10 ^ 6))
+ivs_raw <- read_csv("data/IVS/vw_IVSSurveyMainHeader.csv") |>
+  filter(Year == 2015)
+
+ivs <- ivs_raw |>
+  mutate(country = fct_lump(CORNextYr, n = 10, w = PopulationWeight)) |>
+  group_by(country) |>
+  summarise(spend = sum(WeightedSpend * PopulationWeight) / 10 ^ 6)
 
 
 ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
@@ -796,8 +785,7 @@ ggplot(ivs, aes(x = country, weight = spend, fill = country)) +
 ## Sequence {data-transition="fade"}
 ```{r}
 ivs %>%
-     arrange(spend) %>%
-     mutate(country = factor(country, levels = country)) %>%
+     mutate(country = fct_reorder(country, spend)) %>%
      ggplot(aes(x = country, weight = spend, fill = country)) +
      geom_bar() +
      ggtitle("Tourist Spend in New Zealand 2015",
@@ -834,7 +822,7 @@ ivs %>%
               colour = "steelblue") +
     ggtitle("Tourist Spend in New Zealand 2015",
          subtitle = "International Visitor Survey") +
-    scale_x_continuous(label = dollar, limits = c(0, 1750)) +
+    scale_x_continuous(label = dollar, limits = c(0, 2750)) +
     labs(y = "", x = "Millions of dollars") +
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank())
@@ -853,7 +841,7 @@ ivs %>%
               colour = "steelblue") +
     ggtitle("Tourist Spend in New Zealand 2015",
          subtitle = "International Visitor Survey") +
-    scale_x_continuous(label = dollar, limits = c(0, 1750)) +
+    scale_x_continuous(label = dollar, limits = c(0, 2750)) +
     labs(y = "", x = "Millions of dollars") +
     theme(axis.text.y = element_blank())
 ```
@@ -884,10 +872,15 @@ ggplot(ivs, aes(x = factor(1), fill = country, weight = spend)) +
 
 ## Not just this {data-transition="fade-out"}
 ```{r}
-itm <- ImportTS2(TRED, "Visitor arrival totals (Monthly)",
-			where = "CV1 = 'Actual Counts'", silent = TRUE)
+itm <- read_csv("data/ITM330701_20230707_121953_98.csv", skip = 1) |>
+  rename(ym = `...1`,
+         value = `Actual Counts`) |>
+  filter(!is.na(value)) |>
+  mutate(y = substring(ym, 1, 4),
+         m = substring(ym, 6, 7),
+         TimePeriod = as.Date(paste(y, m, 15, sep = "-")))
 
-p2 <- ggplot(itm, aes(x = TimePeriod, y = Value)) +
+p2 <- ggplot(itm, aes(x = TimePeriod, y = value)) +
     geom_line() +
     labs(x = "", y = "",
          caption = "Source: International Travel and Migration, Statistics New Zealand") +
@@ -907,9 +900,9 @@ p2 + scale_y_log10(label = comma, breaks = c(1000, 10000, 100000))
 ## Or this {data-transition="fade-in"}
 ```{r}
 itm %>%
-    ggplot(aes(x = TimePeriod, y = Value)) +
+    ggplot(aes(x = TimePeriod, y = value)) +
     annotate("rect", xmin = as.Date("1939-09-01"), xmax = as.Date("1945-09-02"), 
-               ymin = min(itm$Value), ymax = 5000, fill = "orange", alpha = 0.3)  +
+               ymin = min(itm$value), ymax = 5000, fill = "orange", alpha = 0.3)  +
     geom_line(colour = "grey70") +
     labs(x = "", y = "",
          caption = "Source: International Travel and Migration, Statistics New Zealand") +
@@ -935,8 +928,7 @@ itm %>%
 
 - Comparative
 - Multivariate
-- High data density
-- Reveal interactions and comparisons
+- Reveal interactions 
 - Nearly all the ink is data ink
 - All attention to the data and to the story!
 
