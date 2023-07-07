@@ -175,9 +175,10 @@ cat("<\\tiny>")
 ## Illustrate concepts
 ![animation1](regression_n_small.gif)
 
-## 
+## Let user play with parameters
 <iframe width="980" height="700" src="https://ellisp.shinyapps.io/individual-vote-nzes/" style = "overflow-y: hidden;"></iframe>
-##
+
+## Simplify results
 ```{r}
 load("data/TAGDP_public.rda")
 load("data/mtagdp_totals.rda")
@@ -233,7 +234,7 @@ ggplot(the_data) +
 
 ```
 
-## {data-background-video="rotating2.mp4"}
+## Grab attention {data-background-video="rotating2.mp4"}
 
 
 
