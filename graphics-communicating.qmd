@@ -1,7 +1,7 @@
 ---
 title: "Statistical graphics for communicating"
 title-slide-attributes:
-  data-background-image: /images/spc-background.png
+  data-background-image: images/spc-background.png
   data-background-size: contain
 author: "Peter Ellis"
 organization: "Pacific Community (SPC)"
@@ -184,7 +184,7 @@ kable(summary(mod2)$coefficients)
 
 
 ## Illustrate concepts {data-background="images/spc-background.png"}
-![](regression_n_small.gif)
+![](images/regression_n_small.gif)
 
 ## Let user play with parameters {data-background="images/spc-background.png"}
 <iframe width="980" height="700" src="https://ellisp.shinyapps.io/individual-vote-nzes/" style = "overflow-y: hidden;"></iframe>
@@ -245,7 +245,7 @@ ggplot(the_data) +
 
 ```
 
-## Grab attention {data-background-video="rotating2.mp4"}
+## Grab attention {data-background-video="images/rotating2.mp4"}
 
 
 
@@ -840,19 +840,19 @@ ivs |>
 ## Use like a table {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
 ivs |>
-    arrange(spend) |>
-    mutate(country = paste0(country, ", ", round(spend / sum(spend) * 100 ), "%")) |>
-    mutate(country = factor(country, levels = country)) |>
-    ggplot(aes(y = country, x = spend)) +
-    geom_segment(aes(yend = country), xend = 0, colour = "steelblue") +
-    geom_point(size = 2) +
-    geom_text(aes(label = country), hjust = 0, family = "Calibri", nudge_x = 50,
-              colour = "steelblue") +
-    ggtitle("Tourist Spend in New Zealand 2015",
-         subtitle = "International Visitor Survey") +
-    scale_x_continuous(label = dollar, limits = c(0, 2750)) +
-    labs(y = "", x = "Millions of dollars") +
-    theme(axis.text.y = element_blank())
+  arrange(spend) |>
+  mutate(country = paste0(country, ", ", round(spend / sum(spend) * 100 ), "%")) |>
+  mutate(country = factor(country, levels = country)) |>
+  ggplot(aes(y = country, x = spend)) +
+  geom_segment(aes(yend = country), xend = 0, colour = "steelblue") +
+  geom_point(size = 2) +
+  geom_text(aes(label = country), hjust = 0, family = "Calibri", nudge_x = 50,
+            colour = "steelblue") +
+  ggtitle("Tourist Spend in New Zealand 2015",
+       subtitle = "International Visitor Survey") +
+  scale_x_continuous(label = dollar, limits = c(0, 2750), expand = c(0,0)) +
+  labs(y = "", x = "Millions of dollars") +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
 ```
 
 ## Better than  {data-transition="fade-in" data-background="images/spc-background.png"}

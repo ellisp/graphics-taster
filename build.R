@@ -2,5 +2,5 @@
 library(quarto)
 
 
-quarto_render("graphics-ird.qmd")
+quarto_render("graphics-communicating.qmd")
 
