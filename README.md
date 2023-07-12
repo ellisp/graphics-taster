@@ -1,4 +1,6 @@
 # graphics-taster
-Presentation on graphics in June 2016
+Presentation on graphics originally from June 2016, updated July 2023 to make it more reproducible and use SPC styling for the slides.
 
-Run `build.R` but you probably need a lot of R packages and stuff installed first.  And it may not be fully reproducible (eg may have some non-public R libraries).
+graphics-communicating.qmd is a Quarto document that builds into graphics-communicating.html, which is a revealjs HTML presentation.
+
+Run `build.R` to build. Not fully reproducible without access to the `spcstyle` R package, but not difficult to work around that (ie change the few snippets of code that use functions from it.)
