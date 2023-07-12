@@ -20,3 +20,14 @@ vignettes/*.pdf
 .Rproj.user
 
 *.Rproj
+
+graphics-ird_cache/
+graphics-ird_files/
+data/IVS/*
+*.zip
+
+data/shapefiles/
+
+graphics-communicating_cache/*
+graphics-communicating_files/*
+*.html

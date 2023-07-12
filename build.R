@@ -1,6 +1,6 @@
-library(knitr)
-library(rmarkdown)
-library(shinyapps)
 
-render("graphics-ird.Rmd")
+library(quarto)
+
+
+quarto_render("graphics-communicating.qmd", cache_refresh= FALSE)
 
