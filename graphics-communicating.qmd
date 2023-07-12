@@ -39,9 +39,13 @@ library(sf)
 #library(nzcensus) # for maps of NZ, see https://github.com/ellisp/nzelect
 library(spcstyle)
 source("helpers.R")
-theme_set(theme_solarized(base_family = "Calibri") +
+presso_theme <- theme_solarized(base_family = "Calibri") +
     theme(panel.background = element_blank(),
-          strip.background = element_rect(colour = NA, fill = stripcolour)))
+          strip.background = element_rect(colour = NA, fill = stripcolour),
+          panel.grid.major = element_line(colour = "white"),
+          panel.grid.minor = element_line(colour = "white"))
+
+theme_set(presso_theme)
 
 load("data/nzis.rda")
 load("data/AreaUnits2013.rda")
@@ -540,24 +544,24 @@ p +
 
 ## Consistent doc theme   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
-p + theme_solarized() +
-    theme(panel.background = element_blank()) +
+p + theme_solarized() + # not quite presso_theme because wnat default font!
+  theme(panel.background = element_blank(),
+        panel.grid.major = element_line(colour = "white"),
+        panel.grid.minor = element_line(colour = "white"))+
     theme(legend.position = "bottom",
           strip.background = element_rect(colour = NA, fill = stripcolour))
 ```
 
 ## Consistent font   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
-p + theme_solarized(base_family = "Calibri") +
-    theme(panel.background = element_blank()) +
+p + presso_theme +
     theme(legend.position = "bottom",
           strip.background = element_rect(colour = NA, fill = stripcolour))
 ```
 
 ## Corporate colours   {data-transition="fade" data-background="images/spc-background.png"}
 ```{r}
-p + theme_solarized(base_family = "Calibri") +
-    theme(panel.background = element_blank()) +
+p + presso_theme +
     theme(legend.position = "bottom",
           strip.background = element_rect(colour = NA, fill = stripcolour)) +
     scale_colour_manual(values = spc_cols(c(1, 5)))
@@ -572,8 +576,7 @@ labs <- data.frame(
     value = c(13, 0)
 )
 
-p + theme_solarized(base_family = "Calibri") +
-    theme(panel.background = element_blank()) +
+p + presso_theme +
     theme(legend.position = "none",
           strip.background = element_rect(colour = NA, fill = stripcolour)) +
     scale_colour_manual(values = spc_cols(c(1, 5))) +
@@ -595,6 +598,7 @@ p +
 
 - Remove all unnecessary ink
 - Focus on the data
+- Well-designed
 
 # Another improvement example { data-background="images/spc-background.png"}
 ## Original  {data-transition="fade-out" data-background="images/spc-background.png"}
@@ -831,7 +835,7 @@ ivs |>
               colour = "steelblue") +
     ggtitle("Tourist Spend in New Zealand 2015",
          subtitle = "International Visitor Survey") +
-    scale_x_continuous(label = dollar, limits = c(0, 2750)) +
+    scale_x_continuous(label = dollar, limits = c(0, 2750), expand = c(0,0)) +
     labs(y = "", x = "Millions of dollars") +
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank())
@@ -941,4 +945,4 @@ itm |>
 - Nearly all the ink is data ink
 - All attention to the data and to the story!
 
-
+Source code available at: <small>[https://github.com/PacificCommunity/sdd-graphics-talk-2023-July/](https://github.com/PacificCommunity/sdd-graphics-talk-2023-July/)</small>
